@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>타이핑 문구 배너 코드 생성기</title>
+<style>
+  * { box-sizing:border-box; }
+  body {
+    font-family: -apple-system, "Malgun Gothic", sans-serif;
+    background:#f4f4f6;
+    margin:0;
+    padding: 20px;
+    color:#222;
+  }
+  .wrap { max-width: 1180px; margin:0 auto; }
+  .layout { display:flex; gap:20px; align-items:flex-start; }
+  .col-left { flex: 1 1 0; min-width:0; }
+  .col-right { flex: 1 1 0; min-width:0; position:sticky; top:20px; }
+  @media (max-width: 880px) {
+    .layout { display:block; }
+    .col-right { position:static; margin-top:0; }
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  p.desc { color:#666; font-size:14px; margin-bottom:20px; line-height:1.6; }
+  .box {
+    background:#fff;
+    border-radius:12px;
+    padding:16px;
+    margin-bottom:16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .box h2 { font-size:15px; margin:0 0 8px; }
+  .box p.hint { font-size:12px; color:#888; margin:0 0 8px; line-height:1.5; }
+  textarea, input[type="text"] {
+    width:100%;
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:10px;
+    font-size:13px;
+    font-family: monospace;
+    resize: vertical;
+  }
+  textarea { min-height:110px; }
+  input[type="text"] { font-family: -apple-system, "Malgun Gothic", sans-serif; font-size:14px; }
+  .row2 { display:flex; gap:12px; }
+  .row2 > div { flex:1; min-width:0; }
+  .color-set { display:flex; align-items:center; gap:10px; }
+  .color-set input[type="color"] {
+    width:52px; height:40px; border:1px solid #ddd; border-radius:8px; padding:2px; cursor:pointer;
+  }
+  .color-set input[type="text"] { flex:1; }
+  button {
+    background:#00d9b3;
+    color:#0a0a0a;
+    border:none;
+    font-weight:700;
+    font-size:15px;
+    padding:12px 20px;
+    border-radius:8px;
+    cursor:pointer;
+    width:100%;
+  }
+  button:active { opacity:0.85; }
+  .btn-row { display:flex; gap:10px; }
+  .btn-row button { width:auto; flex:1; }
+  #resetBtn {
+    background:#fff;
+    color:#555;
+    border:1.5px solid #ddd;
+  }
+  #resetBtn:hover { border-color:#bbb; background:#f7f7f7; }
+  #status { font-size:13px; margin-top:8px; color:#e0455a; min-height:18px; }
+  #result-wrap { display:none; }
+  #resultBox {
+    width:100%;
+    min-height:200px;
+    font-family: monospace;
+    font-size:12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:10px;
+  }
+  .copy-btn { background:#1a1a1a; color:#fff; margin-top:8px; }
+  .count-tag {
+    display:inline-block;
+    background:#eafaf6;
+    color:#00a389;
+    font-size:12px;
+    padding:2px 8px;
+    border-radius:20px;
+    margin-left:6px;
+  }
+  .num-set { display:flex; flex-direction:column; gap:16px; }
+  .num-set label { font-size:12px; color:#555; display:flex; justify-content:space-between; margin-bottom:8px; }
+  .num-set .val-tag { font-family:monospace; font-weight:700; color:#00a389; background:#eafaf6; padding:1px 8px; border-radius:20px; }
+  .num-set input[type="range"] {
+    -webkit-appearance:none;
+    appearance:none;
+    width:100%;
+    height:6px;
+    border-radius:4px;
+    background:#e6e6e6;
+    outline:none;
+    cursor:pointer;
+    margin:0;
+  }
+  .num-set input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance:none;
+    appearance:none;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    background:#00d9b3;
+    border:3px solid #fff;
+    box-shadow:0 0 0 1px #00d9b3, 0 2px 4px rgba(0,0,0,0.2);
+    cursor:pointer;
+    margin-top:-7px;
+  }
+  .num-set input[type="range"]::-moz-range-thumb {
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    background:#00d9b3;
+    border:3px solid #fff;
+    box-shadow:0 0 0 1px #00d9b3, 0 2px 4px rgba(0,0,0,0.2);
+    cursor:pointer;
+  }
+  .num-set input[type="range"]::-moz-range-progress {
+    background:#00d9b3;
+    height:6px;
+    border-radius:4px;
+  }
+  .emphasis-toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .em-btn {
+    width:auto;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:#fafafa;
+    color:#333;
+    border:1px solid #eee;
+    font-weight:600;
+    font-size:12px;
+    padding:7px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .em-btn:hover { border-color:#00d9b3; background:#eafaf6; }
+  .em-btn:active { opacity:0.85; }
+  .em-swatch {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:18px;
+    height:18px;
+    border-radius:4px;
+    flex-shrink:0;
+  }
+  .em-swatch-color { background:#1a1a1a; color:#ffcc00; font-weight:900; }
+  .em-swatch-color::before { content:'가'; font-size:11px; }
+  .em-swatch-mark { background:#fff59d; color:#1a1a1a; font-weight:900; }
+  .em-swatch-mark::before { content:'가'; font-size:11px; }
+  .em-swatch-underline {
+    background:transparent;
+    color:#333;
+    font-weight:900;
+    font-size:11px;
+    text-decoration:underline;
+    text-decoration-color:#ffcc00;
+    text-decoration-thickness:2px;
+    text-underline-offset:2px;
+    border-radius:0;
+  }
+  .emoji-picker { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .emoji-btn {
+    width:auto;
+    font-size:20px;
+    line-height:1;
+    padding:8px 10px;
+    border:1px solid #eee;
+    border-radius:8px;
+    background:#fafafa;
+    cursor:pointer;
+    transition: transform 0.1s, border-color 0.15s;
+  }
+  .emoji-btn:hover { border-color:#00d9b3; background:#eafaf6; }
+  .emoji-btn:active { transform:scale(0.9); }
+  .emoji-btn.selected { border-color:#00d9b3; background:#eafaf6; box-shadow:0 0 0 1px #00d9b3; }
+  #livePreview {
+    background:#111111;
+    border-radius:6px;
+    padding:18px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    width:100%;
+  }
+  #livePreview .pv-icon { font-size:26px; line-height:1; flex-shrink:0; }
+  #livePreview .pv-text-wrap { position:relative; height:34px; flex:1; min-width:0; max-width:500px; overflow:hidden; }
+  #livePreview .pv-text {
+    position:absolute; left:0; top:50%; transform:translateY(-50%);
+    font-family:'Noto Sans KR', sans-serif; font-size:24px; font-weight:900; letter-spacing:-0.5px; white-space:nowrap;
+  }
+  #livePreview .pv-cursor {
+    position:absolute; top:50%; transform:translateY(-50%); width:3px; height:24px; animation: pvBlink 0.7s step-end infinite;
+  }
+  @keyframes pvBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>⌨️ 타이핑 문구 배너 코드 생성기</h1>
+  <p class="desc">
+    문구가 타이핑되듯 나타났다 지워지며 순환하는 배너입니다. 아이콘, 문구, 색상을 원하는 대로 입력하고
+    버튼을 누르면 티스토리 HTML 모드에 붙여넣을 수 있는 완성된 코드가 만들어져요.
+  </p>
+
+  <div class="layout">
+  <div class="col-left">
+
+  <div class="box">
+    <h2>① 아이콘</h2>
+    <p class="hint">이모지나 짧은 텍스트를 입력하세요 (예: 📢, 🔥, NEW). 아래 버튼을 눌러도 바로 적용돼요.</p>
+    <input type="text" id="iconInput" value="📢" maxlength="4">
+    <div class="emoji-picker" id="emojiPicker">
+      <button type="button" class="emoji-btn" data-emoji="📢">📢</button>
+      <button type="button" class="emoji-btn" data-emoji="⚠️">⚠️</button>
+      <button type="button" class="emoji-btn" data-emoji="🔥">🔥</button>
+      <button type="button" class="emoji-btn" data-emoji="🎉">🎉</button>
+      <button type="button" class="emoji-btn" data-emoji="✨">✨</button>
+      <button type="button" class="emoji-btn" data-emoji="⚡">⚡</button>
+      <button type="button" class="emoji-btn" data-emoji="💡">💡</button>
+      <button type="button" class="emoji-btn" data-emoji="📌">📌</button>
+      <button type="button" class="emoji-btn" data-emoji="🎁">🎁</button>
+      <button type="button" class="emoji-btn" data-emoji="🚀">🚀</button>
+      <button type="button" class="emoji-btn" data-emoji="❗">❗</button>
+      <button type="button" class="emoji-btn" data-emoji="✅">✅</button>
+      <button type="button" class="emoji-btn" data-emoji="⏰">⏰</button>
+      <button type="button" class="emoji-btn" data-emoji="🆕">🆕</button>
+      <button type="button" class="emoji-btn" data-emoji="💰">💰</button>
+      <button type="button" class="emoji-btn" data-emoji="📍">📍</button>
+      <button type="button" class="emoji-btn" data-emoji="🚨">🚨</button>
+      <button type="button" class="emoji-btn" data-emoji="🟡">🟡</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>② 배너 문구 <span class="count-tag" id="msgCount">0개</span></h2>
+    <p class="hint">한 줄에 문구 하나씩 입력하세요. 순서대로 타이핑되면서 순환합니다.<br>강조하고 싶은 부분을 <b>드래그로 선택</b>한 뒤 아래 버튼을 누르면 자동으로 표시돼요. (효과끼리 겹쳐 쓰는 건 지원하지 않아요)</p>
+    <div class="emphasis-toolbar" id="emphasisToolbar">
+      <button type="button" class="em-btn" data-marker="**" title="글자색 강조"><span class="em-swatch em-swatch-color"></span>글자색</button>
+      <button type="button" class="em-btn" data-marker="==" title="배경색 강조"><span class="em-swatch em-swatch-mark"></span>배경색</button>
+      <button type="button" class="em-btn" data-marker="~~" title="밑줄 강조"><span class="em-swatch em-swatch-underline">가</span>밑줄</button>
+    </div>
+    <textarea id="msgInput" placeholder="예)&#10;마감임박, 선착순 **100명** 한정&#10;지금 신청하면, ==우선 참여== 대상&#10;정원 마감 시, 예고없이 조기 종료">마감임박, 선착순 **100명** 한정
+지금 신청하면, ==우선 참여== 대상
+정원 마감 시, 예고없이 조기 종료</textarea>
+  </div>
+
+  <div class="box">
+    <h2>③ 색상</h2>
+    <p class="hint" style="margin-bottom:4px;">배경색 <span class="count-tag" id="bgColorTag">#111111</span></p>
+    <div class="color-set" style="margin-bottom:14px;">
+      <input type="color" id="bgColorPicker" value="#111111">
+      <input type="text" id="bgColorHex" value="#111111" maxlength="7">
+    </div>
+    <p class="hint" style="margin-bottom:4px;">글자색 <span class="count-tag" id="textColorTag">#ffffff</span></p>
+    <div class="color-set" style="margin-bottom:14px;">
+      <input type="color" id="textColorPicker" value="#ffffff">
+      <input type="text" id="textColorHex" value="#ffffff" maxlength="7">
+    </div>
+    <p class="hint" style="margin-bottom:4px;">강조색 <span class="count-tag" id="highlightColorTag">#ffcc00</span> <span style="font-weight:400; color:#999;">(글자색·밑줄 강조에 적용)</span></p>
+    <div class="color-set" style="margin-bottom:14px;">
+      <input type="color" id="highlightColorPicker" value="#ffcc00">
+      <input type="text" id="highlightColorHex" value="#ffcc00" maxlength="7">
+    </div>
+    <p class="hint" style="margin-bottom:4px;">배경색 <span class="count-tag" id="markColorTag">#fff59d</span> <span style="font-weight:400; color:#999;">(배경색 강조에 적용)</span></p>
+    <div class="color-set" style="margin-bottom:14px;">
+      <input type="color" id="markColorPicker" value="#fff59d">
+      <input type="text" id="markColorHex" value="#fff59d" maxlength="7">
+    </div>
+    <p class="hint" style="margin-bottom:4px;">커서색 <span class="count-tag" id="cursorColorTag">#ffffff</span></p>
+    <div class="color-set">
+      <input type="color" id="cursorColorPicker" value="#ffffff">
+      <input type="text" id="cursorColorHex" value="#ffffff" maxlength="7">
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>④ 속도 설정 (선택)</h2>
+    <p class="hint">숫자가 작을수록 빠릅니다. 기본값 그대로 써도 자연스러워요.</p>
+    <div class="num-set">
+      <div>
+        <label>타이핑 속도 <span class="val-tag" id="typeSpeedVal">85ms</span></label>
+        <input type="range" id="typeSpeed" value="85" min="10" max="300" step="5">
+      </div>
+      <div>
+        <label>지우는 속도 <span class="val-tag" id="deleteSpeedVal">45ms</span></label>
+        <input type="range" id="deleteSpeed" value="45" min="10" max="300" step="5">
+      </div>
+      <div>
+        <label>문구 다 쓴 후 대기 <span class="val-tag" id="pauseAfterTypeVal">2000ms</span></label>
+        <input type="range" id="pauseAfterType" value="2000" min="0" max="6000" step="50">
+      </div>
+      <div>
+        <label>다 지운 후 대기 <span class="val-tag" id="pauseAfterDeleteVal">300ms</span></label>
+        <input type="range" id="pauseAfterDelete" value="300" min="0" max="3000" step="50">
+      </div>
+    </div>
+  </div>
+
+  </div>
+  <!-- /col-left -->
+
+  <div class="col-right">
+
+  <div class="box">
+    <h2>⑤ 미리보기</h2>
+    <div id="livePreview">
+      <span class="pv-icon" id="pvIcon">📢</span>
+      <div class="pv-text-wrap">
+        <span class="pv-text" id="pvText"></span>
+        <span class="pv-cursor" id="pvCursor"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button id="generateBtn">✨ 배너 코드 생성하기</button>
+    <button id="resetBtn" type="button">↺ 초기화</button>
+  </div>
+  <div id="status"></div>
+
+  <div class="box" id="result-wrap">
+    <h2>⑥ 완성된 코드 (전체 선택 후 복사해서 티스토리 HTML 모드에 붙여넣기)</h2>
+    <textarea id="resultBox" readonly></textarea>
+    <button class="copy-btn" id="copyBtn">📋 코드 전체 복사하기</button>
+  </div>
+
+  </div>
+  <!-- /col-right -->
+
+  </div>
+  <!-- /layout -->
+
+</div>
+
+<script>
+  const HEX_RE = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/;
+
+  function bindColor(pickerId, hexId, tagId, onChange) {
+    const picker = document.getElementById(pickerId);
+    const hex = document.getElementById(hexId);
+    const tag = document.getElementById(tagId);
+
+    picker.addEventListener('input', function () {
+      hex.value = picker.value;
+      tag.textContent = picker.value;
+      onChange();
+    });
+    hex.addEventListener('input', function () {
+      let v = hex.value.trim();
+      if (v && v[0] !== '#') v = '#' + v;
+      if (HEX_RE.test(v)) {
+        picker.value = v.length === 4 ? '#' + v[1]+v[1]+v[2]+v[2]+v[3]+v[3] : v;
+        tag.textContent = v;
+        onChange();
+      }
+    });
+
+    return function get() {
+      let v = hex.value.trim();
+      if (v && v[0] !== '#') v = '#' + v;
+      return HEX_RE.test(v) ? v : picker.value;
+    };
+  }
+
+  const getBgColor = bindColor('bgColorPicker', 'bgColorHex', 'bgColorTag', updatePreviewStyle);
+  const getTextColor = bindColor('textColorPicker', 'textColorHex', 'textColorTag', updatePreviewStyle);
+  const getCursorColor = bindColor('cursorColorPicker', 'cursorColorHex', 'cursorColorTag', updatePreviewStyle);
+  const getHighlightColor = bindColor('highlightColorPicker', 'highlightColorHex', 'highlightColorTag', function () {
+    updatePreviewStyle();
+    pvRenderCurrent();
+  });
+  const getMarkColor = bindColor('markColorPicker', 'markColorHex', 'markColorTag', function () {
+    updatePreviewStyle();
+    pvRenderCurrent();
+  });
+
+  function updatePreviewStyle() {
+    document.getElementById('livePreview').style.background = getBgColor();
+    document.getElementById('pvText').style.color = getTextColor();
+    document.getElementById('pvCursor').style.background = getCursorColor();
+  }
+
+  // ---- 강조 문법 파싱 유틸 (**글자색**, ==배경색==, ~~밑줄~~) ----
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  const EMPHASIS_RE = /\*\*(.+?)\*\*|==(.+?)==|~~(.+?)~~/g;
+  function parseHighlightMsg(raw) {
+    const ranges = [];
+    let plain = '';
+    let lastIndex = 0, m;
+    EMPHASIS_RE.lastIndex = 0;
+    while ((m = EMPHASIS_RE.exec(raw)) !== null) {
+      plain += raw.slice(lastIndex, m.index);
+      const start = plain.length;
+      let type, text;
+      if (m[1] !== undefined) { type = 'color'; text = m[1]; }
+      else if (m[2] !== undefined) { type = 'mark'; text = m[2]; }
+      else { type = 'underline'; text = m[3]; }
+      plain += text;
+      ranges.push([start, plain.length, type]);
+      lastIndex = EMPHASIS_RE.lastIndex;
+    }
+    plain += raw.slice(lastIndex);
+    return { plain, ranges };
+  }
+  function emphasisStyle(type, highlightColor, markColor) {
+    if (type === 'mark') return 'background:' + markColor + ';color:#1a1a1a;padding:0 4px;border-radius:3px;box-decoration-break:clone;-webkit-box-decoration-break:clone;';
+    if (type === 'underline') return 'color:inherit;text-decoration:underline;text-decoration-color:' + highlightColor + ';text-decoration-thickness:3px;text-underline-offset:4px;';
+    return 'color:' + highlightColor + ';';
+  }
+  function renderTypedHtml(plain, ranges, ci, highlightColor, markColor) {
+    let html = '', i = 0;
+    while (i < ci) {
+      const r = ranges.find(function (r) { return i >= r[0] && i < r[1]; });
+      if (r) {
+        const end = Math.min(r[1], ci);
+        html += '<span style="' + emphasisStyle(r[2], highlightColor, markColor) + '">' + escapeHtml(plain.slice(i, end)) + '</span>';
+        i = end;
+      } else {
+        let nextStart = ci;
+        ranges.forEach(function (rr) { if (rr[0] > i && rr[0] < nextStart) nextStart = rr[0]; });
+        html += escapeHtml(plain.slice(i, nextStart));
+        i = nextStart;
+      }
+    }
+    return html;
+  }
+
+  // ---- 강조 버튼 (선택한 텍스트를 마커로 감싸기) ----
+  document.querySelectorAll('#emphasisToolbar .em-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const marker = btn.dataset.marker;
+      const ta = document.getElementById('msgInput');
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      const val = ta.value;
+      const hasSelection = start !== end;
+      const selected = hasSelection ? val.slice(start, end) : '텍스트';
+      ta.value = val.slice(0, start) + marker + selected + marker + val.slice(end);
+      const selStart = start + marker.length;
+      const selEnd = selStart + selected.length;
+      ta.focus();
+      ta.setSelectionRange(selStart, selEnd);
+      ta.dispatchEvent(new Event('input'));
+    });
+  });
+
+
+  function bindSpeedSlider(sliderId, tagId) {
+    const slider = document.getElementById(sliderId);
+    const tag = document.getElementById(tagId);
+    tag.textContent = slider.value + 'ms';
+    slider.addEventListener('input', function () {
+      tag.textContent = slider.value + 'ms';
+    });
+  }
+  bindSpeedSlider('typeSpeed', 'typeSpeedVal');
+  bindSpeedSlider('deleteSpeed', 'deleteSpeedVal');
+  bindSpeedSlider('pauseAfterType', 'pauseAfterTypeVal');
+  bindSpeedSlider('pauseAfterDelete', 'pauseAfterDeleteVal');
+
+  document.getElementById('iconInput').addEventListener('input', function () {
+    document.getElementById('pvIcon').textContent = this.value || '📢';
+    document.querySelectorAll('.emoji-btn').forEach(b => {
+      b.classList.toggle('selected', b.dataset.emoji === this.value.trim());
+    });
+  });
+
+  document.querySelectorAll('.emoji-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const iconInput = document.getElementById('iconInput');
+      iconInput.value = btn.dataset.emoji;
+      document.getElementById('pvIcon').textContent = btn.dataset.emoji;
+      document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+  document.querySelector('.emoji-btn[data-emoji="📢"]').classList.add('selected');
+
+  function parseMessages() {
+    return document.getElementById('msgInput').value
+      .split('\n')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  }
+
+  function updateMsgCount() {
+    document.getElementById('msgCount').textContent = parseMessages().length + '개';
+  }
+  document.getElementById('msgInput').addEventListener('input', updateMsgCount);
+
+  // ---- 미리보기용 타이핑 애니메이션 (실제 생성 코드와 동일한 로직의 축소판) ----
+  let pvMi = 0, pvCi = 0, pvDel = false, pvTimer = null, pvParsed = { plain: '', ranges: [] };
+  function pvFitFontSize() {
+    const wrap = document.querySelector('#livePreview .pv-text-wrap');
+    const el = document.getElementById('pvText');
+    const wrapWidth = wrap.getBoundingClientRect().width;
+    if (!wrapWidth) return;
+    const msgs = parseMessages();
+    if (msgs.length === 0) return;
+    const test = document.createElement('span');
+    test.style.visibility = 'hidden';
+    test.style.position = 'absolute';
+    test.style.whiteSpace = 'nowrap';
+    test.style.fontFamily = "'Noto Sans KR', sans-serif";
+    test.style.fontWeight = '900';
+    test.style.letterSpacing = '-0.5px';
+    document.body.appendChild(test);
+    let fontSize = 24;
+    const minFontSize = 13;
+    const plainMsgs = msgs.map(m => parseHighlightMsg(m).plain);
+    const longest = plainMsgs.reduce((a, b) => a.length > b.length ? a : b);
+    test.style.fontSize = fontSize + 'px';
+    test.textContent = longest;
+    while (test.getBoundingClientRect().width > wrapWidth - 4 && fontSize > minFontSize) {
+      fontSize -= 1;
+      test.style.fontSize = fontSize + 'px';
+    }
+    document.body.removeChild(test);
+    el.style.fontSize = fontSize + 'px';
+    document.getElementById('pvCursor').style.height = Math.round(fontSize * 1.0) + 'px';
+  }
+  function pvMoveCursor() {
+    const el = document.getElementById('pvText');
+    document.getElementById('pvCursor').style.left = el.getBoundingClientRect().width + 'px';
+  }
+  function pvRenderCurrent() {
+    const el = document.getElementById('pvText');
+    el.innerHTML = renderTypedHtml(pvParsed.plain, pvParsed.ranges, pvCi, getHighlightColor(), getMarkColor());
+    pvMoveCursor();
+  }
+  function pvRun() {
+    const msgs = parseMessages();
+    if (msgs.length === 0) {
+      document.getElementById('pvText').textContent = '';
+      return;
+    }
+    if (pvMi >= msgs.length) pvMi = 0;
+    pvParsed = parseHighlightMsg(msgs[pvMi]);
+    const typeSpeed = parseInt(document.getElementById('typeSpeed').value, 10) || 85;
+    const deleteSpeed = parseInt(document.getElementById('deleteSpeed').value, 10) || 45;
+    const pauseAfterType = parseInt(document.getElementById('pauseAfterType').value, 10) || 2000;
+    const pauseAfterDelete = parseInt(document.getElementById('pauseAfterDelete').value, 10) || 300;
+
+    if (!pvDel) {
+      pvCi++;
+      pvRenderCurrent();
+      if (pvCi === pvParsed.plain.length) { pvDel = true; pvTimer = setTimeout(pvRun, pauseAfterType); return; }
+      pvTimer = setTimeout(pvRun, typeSpeed);
+    } else {
+      pvCi--;
+      pvRenderCurrent();
+      if (pvCi === 0) { pvDel = false; pvMi = (pvMi + 1) % msgs.length; pvTimer = setTimeout(pvRun, pauseAfterDelete); return; }
+      pvTimer = setTimeout(pvRun, deleteSpeed);
+    }
+  }
+  function restartPreview() {
+    if (pvTimer) clearTimeout(pvTimer);
+    pvMi = 0; pvCi = 0; pvDel = false; pvParsed = { plain: '', ranges: [] };
+    pvFitFontSize();
+    pvRun();
+  }
+  document.getElementById('msgInput').addEventListener('input', function () { pvFitFontSize(); });
+  window.addEventListener('resize', pvFitFontSize);
+
+  updatePreviewStyle();
+  updateMsgCount();
+  restartPreview();
+
+  // ---- 최종 코드 생성 ----
+  function sanitizeForTemplate(str) {
+    return String(str).replace(/`/g, "'").replace(/\$\{/g, '$ {');
+  }
+
+  function buildFinalCode(icon, msgs, bgColor, textColor, cursorColor, highlightColor, markColor, typeSpeed, deleteSpeed, pauseAfterType, pauseAfterDelete) {
+    const msgsJs = msgs.map(m => '  ' + JSON.stringify(sanitizeForTemplate(m)) + ',').join('\n');
+
+    return `<style>
+.ot-banner {
+  background: ${bgColor};
+  border-radius: 6px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ot-icon { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.ot-text-wrap {
+  position: relative;
+  height: 34px;
+  flex: 1;
+  min-width: 0;
+  max-width: 500px;
+  overflow: hidden;
+}
+.ot-text {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  color: ${textColor};
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+.ot-cursor {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 24px;
+  background: ${cursorColor};
+  animation: blink 0.7s step-end infinite;
+}
+@keyframes blink {
+  0%,100%{opacity:1} 50%{opacity:0}
+}
+</style>
+<div class="ot-banner">
+  <span class="ot-icon">${sanitizeForTemplate(icon)}</span>
+  <div class="ot-text-wrap">
+    <span class="ot-text" id="tw"></span>
+    <span class="ot-cursor" id="cur" style="left:0"></span>
+  </div>
+</div>
+<script>
+const msgs = [
+${msgsJs}
+];
+const HL_COLOR = ${JSON.stringify(highlightColor)};
+const MARK_COLOR = ${JSON.stringify(markColor)};
+let mi=0, ci=0, del=false, parsed={plain:'',ranges:[]};
+const el = document.getElementById('tw');
+const cur = document.getElementById('cur');
+const wrap = document.querySelector('.ot-text-wrap');
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+const EMPHASIS_RE = /\\*\\*(.+?)\\*\\*|==(.+?)==|~~(.+?)~~/g;
+function parseHighlight(raw) {
+  const ranges = []; let plain = '';
+  let lastIndex = 0, m;
+  EMPHASIS_RE.lastIndex = 0;
+  while ((m = EMPHASIS_RE.exec(raw)) !== null) {
+    plain += raw.slice(lastIndex, m.index);
+    const start = plain.length;
+    let type, text;
+    if (m[1] !== undefined) { type = 'color'; text = m[1]; }
+    else if (m[2] !== undefined) { type = 'mark'; text = m[2]; }
+    else { type = 'underline'; text = m[3]; }
+    plain += text;
+    ranges.push([start, plain.length, type]);
+    lastIndex = EMPHASIS_RE.lastIndex;
+  }
+  plain += raw.slice(lastIndex);
+  return { plain, ranges };
+}
+function emphasisStyle(type) {
+  if (type === 'mark') return 'background:' + MARK_COLOR + ';color:#1a1a1a;padding:0 4px;border-radius:3px;box-decoration-break:clone;-webkit-box-decoration-break:clone;';
+  if (type === 'underline') return 'color:inherit;text-decoration:underline;text-decoration-color:' + HL_COLOR + ';text-decoration-thickness:3px;text-underline-offset:4px;';
+  return 'color:' + HL_COLOR + ';';
+}
+function renderTyped(plain, ranges, n) {
+  let html = '', i = 0;
+  while (i < n) {
+    const r = ranges.find(function (r) { return i >= r[0] && i < r[1]; });
+    if (r) {
+      const end = Math.min(r[1], n);
+      html += '<span style="' + emphasisStyle(r[2]) + '">' + escapeHtml(plain.slice(i, end)) + '</span>';
+      i = end;
+    } else {
+      let nextStart = n;
+      ranges.forEach(function (rr) { if (rr[0] > i && rr[0] < nextStart) nextStart = rr[0]; });
+      html += escapeHtml(plain.slice(i, nextStart));
+      i = nextStart;
+    }
+  }
+  return html;
+}
+// 가장 긴 문구 기준으로 폰트 크기 계산
+function fitFontSize() {
+  const wrapWidth = wrap.getBoundingClientRect().width;
+  if (!wrapWidth) return;
+  // 측정용 임시 엘리먼트
+  const test = document.createElement('span');
+  test.style.visibility = 'hidden';
+  test.style.position = 'absolute';
+  test.style.whiteSpace = 'nowrap';
+  test.style.fontFamily = "'Noto Sans KR', sans-serif";
+  test.style.fontWeight = '900';
+  test.style.letterSpacing = '-0.5px';
+  document.body.appendChild(test);
+  let fontSize = 24; // 최대 크기
+  const minFontSize = 13; // 최소 크기 (너무 작아지지 않게)
+  const plainMsgs = msgs.map(function (m) { return parseHighlight(m).plain; });
+  const longest = plainMsgs.reduce((a,b) => a.length > b.length ? a : b);
+  test.style.fontSize = fontSize + 'px';
+  test.textContent = longest;
+  while (test.getBoundingClientRect().width > wrapWidth - 4 && fontSize > minFontSize) {
+    fontSize -= 1;
+    test.style.fontSize = fontSize + 'px';
+  }
+  document.body.removeChild(test);
+  el.style.fontSize = fontSize + 'px';
+  cur.style.height = Math.round(fontSize * 1.0) + 'px';
+}
+function moveCursor() {
+  cur.style.left = el.getBoundingClientRect().width + 'px';
+}
+function run() {
+  if (ci === 0 && !del) parsed = parseHighlight(msgs[mi]);
+  if (!del) {
+    ci++;
+    el.innerHTML = renderTyped(parsed.plain, parsed.ranges, ci);
+    moveCursor();
+    if (ci === parsed.plain.length) { del=true; setTimeout(run,${pauseAfterType}); return; }
+    setTimeout(run, ${typeSpeed});
+  } else {
+    ci--;
+    el.innerHTML = renderTyped(parsed.plain, parsed.ranges, ci);
+    moveCursor();
+    if (ci === 0) { del=false; mi=(mi+1)%msgs.length; setTimeout(run,${pauseAfterDelete}); return; }
+    setTimeout(run, ${deleteSpeed});
+  }
+}
+fitFontSize();
+window.addEventListener('resize', fitFontSize);
+run();
+<\/script>`;
+  }
+
+  document.getElementById('generateBtn').addEventListener('click', function () {
+    const icon = document.getElementById('iconInput').value.trim() || '📢';
+    const msgs = parseMessages();
+    const statusEl = document.getElementById('status');
+
+    if (msgs.length === 0) {
+      statusEl.textContent = '⚠️ 문구를 한 줄 이상 입력해주세요.';
+      document.getElementById('result-wrap').style.display = 'none';
+      return;
+    }
+    statusEl.textContent = '';
+
+    const finalCode = buildFinalCode(
+      icon, msgs, getBgColor(), getTextColor(), getCursorColor(), getHighlightColor(), getMarkColor(),
+      parseInt(document.getElementById('typeSpeed').value, 10) || 85,
+      parseInt(document.getElementById('deleteSpeed').value, 10) || 45,
+      parseInt(document.getElementById('pauseAfterType').value, 10) || 2000,
+      parseInt(document.getElementById('pauseAfterDelete').value, 10) || 300
+    );
+    document.getElementById('resultBox').value = finalCode;
+    document.getElementById('result-wrap').style.display = 'block';
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    const DEFAULTS = {
+      icon: '📢',
+      msgs: '마감임박, 선착순 **100명** 한정\n지금 신청하면, ==우선 참여== 대상\n정원 마감 시, 예고없이 조기 종료',
+      bg: '#111111',
+      text: '#ffffff',
+      cursor: '#ffffff',
+      highlight: '#ffcc00',
+      mark: '#fff59d',
+      typeSpeed: 85,
+      deleteSpeed: 45,
+      pauseAfterType: 2000,
+      pauseAfterDelete: 300
+    };
+
+    // 아이콘
+    const iconInput = document.getElementById('iconInput');
+    iconInput.value = DEFAULTS.icon;
+    iconInput.dispatchEvent(new Event('input'));
+
+    // 문구
+    const msgInput = document.getElementById('msgInput');
+    msgInput.value = DEFAULTS.msgs;
+    msgInput.dispatchEvent(new Event('input'));
+
+    // 색상
+    function resetColor(pickerId, hexId, tagId, val) {
+      document.getElementById(pickerId).value = val;
+      document.getElementById(hexId).value = val;
+      document.getElementById(tagId).textContent = val;
+    }
+    resetColor('bgColorPicker', 'bgColorHex', 'bgColorTag', DEFAULTS.bg);
+    resetColor('textColorPicker', 'textColorHex', 'textColorTag', DEFAULTS.text);
+    resetColor('cursorColorPicker', 'cursorColorHex', 'cursorColorTag', DEFAULTS.cursor);
+    resetColor('highlightColorPicker', 'highlightColorHex', 'highlightColorTag', DEFAULTS.highlight);
+    resetColor('markColorPicker', 'markColorHex', 'markColorTag', DEFAULTS.mark);
+    updatePreviewStyle();
+
+    // 속도
+    function resetSlider(sliderId, tagId, val) {
+      const slider = document.getElementById(sliderId);
+      slider.value = val;
+      document.getElementById(tagId).textContent = val + 'ms';
+    }
+    resetSlider('typeSpeed', 'typeSpeedVal', DEFAULTS.typeSpeed);
+    resetSlider('deleteSpeed', 'deleteSpeedVal', DEFAULTS.deleteSpeed);
+    resetSlider('pauseAfterType', 'pauseAfterTypeVal', DEFAULTS.pauseAfterType);
+    resetSlider('pauseAfterDelete', 'pauseAfterDeleteVal', DEFAULTS.pauseAfterDelete);
+
+    // 결과/상태 초기화
+    document.getElementById('status').textContent = '';
+    document.getElementById('result-wrap').style.display = 'none';
+    document.getElementById('resultBox').value = '';
+
+    // 미리보기 재시작
+    restartPreview();
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    const box = document.getElementById('resultBox');
+    box.select();
+    box.setSelectionRange(0, 999999);
+    document.execCommand('copy');
+    const btn = document.getElementById('copyBtn');
+    const original = btn.textContent;
+    btn.textContent = '✅ 복사 완료!';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  });
+</script>
+</body>
+</html>

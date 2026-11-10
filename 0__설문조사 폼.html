@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모바일 설문조사 코드 생성기</title>
+<style>
+  :root{
+    --admin-primary:#0973cf;
+    --admin-primary-dark:#075fae;
+    --admin-primary-light:#eaf5ff;
+    --admin-bg:#f5faff;
+    --admin-text:#171b2d;
+    --admin-sub:#6b7280;
+    --admin-border:#dbe5ef;
+    --admin-white:#ffffff;
+    --admin-danger:#dc2626;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    background:var(--admin-bg);
+    color:var(--admin-text);
+    line-height:1.5;
+  }
+  header.app-header{
+    background:var(--admin-white);
+    border-bottom:1px solid var(--admin-border);
+    padding:16px 20px;
+    position:sticky;top:0;z-index:50;
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+  }
+  header.app-header h1{font-size:19px;margin:0;font-weight:800;}
+  header.app-header .sub{font-size:13px;color:var(--admin-sub);margin-top:2px;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+  button{font-family:inherit;cursor:pointer;}
+  .btn{
+    border:1px solid var(--admin-border);
+    background:var(--admin-white);
+    color:var(--admin-text);
+    padding:9px 14px;border-radius:9px;font-size:13px;font-weight:600;
+    transition:all .12s;
+  }
+  .btn:hover{background:#f2f7fc;}
+  .btn.primary{background:var(--admin-primary);border-color:var(--admin-primary);color:#fff;}
+  .btn.primary:hover{background:var(--admin-primary-dark);}
+  .btn.danger{color:var(--admin-danger);border-color:#f3d0d0;}
+  .btn.danger:hover{background:#fff2f2;}
+  .btn.small{padding:5px 9px;font-size:12px;border-radius:7px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  main.layout{
+    display:grid;
+    grid-template-columns:1.15fr 0.85fr;
+    gap:0;
+    align-items:start;
+    max-width:1600px;
+    margin:0 auto;
+  }
+  @media (max-width:1000px){
+    main.layout{grid-template-columns:1fr;}
+  }
+
+  .config-panel{
+    padding:22px;
+    max-width:820px;
+  }
+  .preview-panel{
+    position:sticky;
+    top:66px;
+    padding:22px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    height:calc(100vh - 66px);
+  }
+  @media (max-width:1000px){
+    .preview-panel{position:relative;top:0;height:auto;}
+  }
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--admin-border);flex-wrap:wrap;}
+  .tab-btn{
+    background:none;border:none;padding:10px 14px;font-size:14px;font-weight:700;color:var(--admin-sub);
+    border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  .tab-btn.active{color:var(--admin-primary);border-bottom-color:var(--admin-primary);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .card-box{
+    background:var(--admin-white);
+    border:1px solid var(--admin-border);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .card-box h3{margin:0 0 12px 0;font-size:15px;font-weight:800;}
+
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--admin-sub);margin-bottom:5px;}
+  .field input[type=text], .field input[type=number], .field textarea, .field select{
+    width:100%;padding:9px 11px;border:1px solid var(--admin-border);border-radius:8px;
+    font-size:14px;font-family:inherit;background:#fff;color:var(--admin-text);
+  }
+  .field textarea{resize:vertical;min-height:52px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f0f4f8;}
+  .toggle-row:last-child{border-bottom:none;}
+  .toggle-row span{font-size:13.5px;font-weight:600;}
+  .switch{position:relative;width:42px;height:24px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .switch .slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;transition:.15s;cursor:pointer;}
+  .switch .slider:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s;}
+  .switch input:checked + .slider{background:var(--admin-primary);}
+  .switch input:checked + .slider:before{transform:translateX(18px);}
+  .color-row{display:flex;align-items:center;gap:10px;}
+  .color-row input[type=color]{width:40px;height:36px;border:1px solid var(--admin-border);border-radius:8px;padding:2px;background:#fff;}
+  .color-row input[type=text]{flex:1;}
+  .range-row{display:flex;align-items:center;gap:10px;}
+  .range-row input[type=range]{flex:1;}
+  .range-row .val{font-size:12.5px;color:var(--admin-sub);width:44px;text-align:right;flex-shrink:0;}
+
+  /* question list */
+  .qlist{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .qitem{
+    background:#fff;border:1px solid var(--admin-border);border-radius:10px;
+    padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;
+  }
+  .qitem.active{border-color:var(--admin-primary);background:var(--admin-primary-light);}
+  .qitem .qnum{
+    width:26px;height:26px;border-radius:50%;background:#eef2f6;color:var(--admin-sub);
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;
+  }
+  .qitem.active .qnum{background:var(--admin-primary);color:#fff;}
+  .qitem .qmeta{flex:1;min-width:0;}
+  .qitem .qmeta .qtitle{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .qitem .qmeta .qtype{font-size:11.5px;color:var(--admin-sub);}
+  .qitem .qactions{display:flex;gap:4px;}
+  .qitem .qactions button{background:none;border:none;font-size:14px;padding:4px 6px;border-radius:6px;color:var(--admin-sub);}
+  .qitem .qactions button:hover{background:#eef2f6;}
+
+  .opt-editor{border:1px solid var(--admin-border);border-radius:10px;padding:10px;margin-bottom:8px;background:#fbfdff;}
+  .opt-editor .opt-head{display:flex;gap:6px;align-items:center;margin-bottom:8px;}
+  .opt-editor .opt-head input{flex-shrink:0;}
+  .opt-editor .icon-input{width:52px !important;text-align:center;}
+
+  .empty-hint{color:var(--admin-sub);font-size:13px;padding:20px;text-align:center;}
+
+  /* device preview */
+  .device-toolbar{display:flex;gap:6px;margin-bottom:12px;}
+  .device-toolbar button{font-size:12px;padding:6px 10px;}
+  .device-row{display:flex;gap:22px;flex-wrap:nowrap;justify-content:flex-start;align-items:flex-start;overflow-x:auto;width:100%;padding:2px 2px 10px;}
+  .device-col{display:flex;flex-direction:column;align-items:center;}
+  .device-label{font-size:12.5px;font-weight:700;color:var(--admin-sub);margin-bottom:8px;}
+  .device-frame{
+    border:10px solid #1c1f26;
+    border-radius:34px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 10px 30px rgba(0,0,0,.15);
+    transition:width .2s, height .15s;
+    flex-shrink:0;
+    min-height:120px;
+  }
+  .device-frame iframe{display:block;border:none;width:100%;}
+
+  /* modal */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;
+    align-items:center;justify-content:center;z-index:200;padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:#fff;border-radius:14px;max-width:720px;width:100%;max-height:85vh;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .modal-head{padding:16px 18px;border-bottom:1px solid var(--admin-border);display:flex;justify-content:space-between;align-items:center;}
+  .modal-head h3{margin:0;font-size:16px;}
+  .modal-body{padding:16px 18px;overflow:auto;}
+  .modal-body textarea{
+    width:100%;height:360px;font-family:Menlo,Consolas,monospace;font-size:12px;
+    padding:12px;border:1px solid var(--admin-border);border-radius:8px;background:#0f172a;color:#e2e8f0;
+  }
+  .modal-foot{padding:14px 18px;border-top:1px solid var(--admin-border);display:flex;gap:8px;justify-content:flex-end;}
+  .toast{
+    position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
+    background:#171b2d;color:#fff;padding:11px 20px;border-radius:10px;font-size:13.5px;
+    z-index:300;opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+  .result-block{border:1px solid var(--admin-border);border-radius:10px;padding:12px;margin-bottom:8px;background:#fbfdff;}
+  .result-block .rhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .result-block .rhead strong{font-size:13.5px;}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div>
+    <h1>📋 모바일 설문조사 코드 생성기</h1>
+    <div class="sub">랜딩페이지에 붙여넣을 수 있는 설문 코드를 만들어보세요</div>
+  </div>
+  <div class="btn-row" style="align-items:center;">
+    <select id="templateSelect" style="padding:9px 11px;border:1px solid var(--admin-border);border-radius:9px;font-size:13px;font-weight:600;background:#fff;">
+      <option value="smile-lasik">스마일라식 (기본)</option>
+      <option value="youth-mv">청소년 MV 캐스팅</option>
+    </select>
+    <button class="btn" id="btnLoadTemplate">템플릿 적용</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn" id="btnSave">설정 저장</button>
+    <button class="btn" id="btnLoad">설정 불러오기</button>
+    <button class="btn" id="btnDownloadCode">HTML 파일로 저장</button>
+    <button class="btn danger" id="btnReset">전체 설정 초기화</button>
+    <button class="btn primary" id="btnCopyCode">📋 코드 복사하기</button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <div class="config-panel">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="questions">질문 관리</button>
+      <button class="tab-btn" data-tab="results">결과 관리</button>
+      <button class="tab-btn" data-tab="design">디자인 설정</button>
+    </div>
+
+    <!-- 질문 관리 -->
+    <div class="tab-panel active" id="tab-questions">
+      <div class="toggle-row" style="background:#fff;border:1px solid var(--admin-border);border-radius:10px;padding:10px 14px;margin-bottom:12px;">
+        <span>선택지 설명(2번째 줄) 표시</span>
+        <label class="switch"><input type="checkbox" id="toggleOptDesc"><span class="slider"></span></label>
+      </div>
+      <div class="card-box">
+        <h3>질문 목록</h3>
+        <div class="qlist" id="qlist"></div>
+        <div class="field-row" style="align-items:center;">
+          <select id="newQType" style="flex:1;padding:9px 11px;border:1px solid var(--admin-border);border-radius:8px;font-size:13.5px;">
+            <option value="single">단일 선택형</option>
+            <option value="multi">복수 선택형</option>
+            <option value="yesno">YES / NO</option>
+            <option value="text">텍스트 입력</option>
+            <option value="name">이름 입력</option>
+            <option value="phone">연락처 입력</option>
+            <option value="dropdown">드롭다운 선택</option>
+            <option value="agree">개인정보 동의</option>
+            <option value="result">결과 화면</option>
+            <option value="form">신청폼</option>
+          </select>
+          <button class="btn primary" id="btnAddQ" style="flex-shrink:0;">+ 질문 추가</button>
+        </div>
+      </div>
+
+      <div class="card-box" id="qEditorBox">
+        <h3>질문 편집</h3>
+        <div id="qEditor"><div class="empty-hint">왼쪽 목록에서 질문을 선택하거나 새로 추가해 주세요.</div></div>
+      </div>
+    </div>
+
+    <!-- 결과 관리 -->
+    <div class="tab-panel" id="tab-results">
+      <div class="card-box">
+        <h3>결과 목록</h3>
+        <div id="resultsList"></div>
+        <button class="btn primary" id="btnAddResult">+ 결과 추가</button>
+      </div>
+    </div>
+
+    <!-- 디자인 설정 -->
+    <div class="tab-panel" id="tab-design">
+      <div class="card-box">
+        <h3>색상</h3>
+        <div class="field">
+          <label>메인 색상 (버튼, 선택 강조)</label>
+          <div class="color-row">
+            <input type="color" id="dsg-primary">
+            <input type="text" id="dsg-primaryText">
+          </div>
+        </div>
+        <div class="field">
+          <label>배경 색상 (전체 바탕)</label>
+          <div class="color-row">
+            <input type="color" id="dsg-bg">
+            <input type="text" id="dsg-bgText">
+          </div>
+        </div>
+      </div>
+
+      <div class="card-box">
+        <h3>글자 크기</h3>
+        <div class="field">
+          <label>질문 제목 크기</label>
+          <div class="range-row"><input type="range" id="dsg-qsize" min="18" max="34" value="24"><span class="val" id="dsg-qsizeVal">24px</span></div>
+        </div>
+        <div class="field">
+          <label>본문(설명) 크기</label>
+          <div class="range-row"><input type="range" id="dsg-bodysize" min="13" max="20" value="16"><span class="val" id="dsg-bodysizeVal">16px</span></div>
+        </div>
+        <div class="field">
+          <label>선택지 제목 크기</label>
+          <div class="range-row"><input type="range" id="dsg-optsize" min="15" max="24" value="18"><span class="val" id="dsg-optsizeVal">18px</span></div>
+        </div>
+        <div class="field">
+          <label>버튼 글자 크기</label>
+          <div class="range-row"><input type="range" id="dsg-btnsize" min="16" max="26" value="21"><span class="val" id="dsg-btnsizeVal">21px</span></div>
+        </div>
+      </div>
+
+      <div class="card-box">
+        <h3>모양 &amp; 여백</h3>
+        <div class="field">
+          <label>카드 둥글기</label>
+          <div class="range-row"><input type="range" id="dsg-cardradius" min="0" max="30" value="18"><span class="val" id="dsg-cardradiusVal">18px</span></div>
+        </div>
+        <div class="field">
+          <label>버튼 둥글기</label>
+          <div class="range-row"><input type="range" id="dsg-btnradius" min="0" max="30" value="16"><span class="val" id="dsg-btnradiusVal">16px</span></div>
+        </div>
+        <div class="field">
+          <label>카드 사이 간격</label>
+          <div class="range-row"><input type="range" id="dsg-cardgap" min="8" max="26" value="15"><span class="val" id="dsg-cardgapVal">15px</span></div>
+        </div>
+        <div class="field">
+          <label>전체 좌우 여백</label>
+          <div class="range-row"><input type="range" id="dsg-pad" min="12" max="30" value="20"><span class="val" id="dsg-padVal">20px</span></div>
+        </div>
+      </div>
+
+      <div class="card-box">
+        <h3>표시 옵션</h3>
+        <div class="toggle-row">
+          <span>진행바 표시</span>
+          <label class="switch"><input type="checkbox" id="dsg-showProgress" checked><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>질문 번호 표시 (1단계 등)</span>
+          <label class="switch"><input type="checkbox" id="dsg-showQNum" checked><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>선택지 아이콘 표시</span>
+          <label class="switch"><input type="checkbox" id="dsg-showIcons" checked><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>선택 즉시 다음 질문으로 이동</span>
+          <label class="switch"><input type="checkbox" id="dsg-autoAdvance"><span class="slider"></span></label>
+        </div>
+      </div>
+
+      <div class="card-box">
+        <h3>결과 화면 글자 크기</h3>
+        <div class="field">
+          <label>상단 뱃지 크기 (예: 우선 선정 대상)</label>
+          <div class="range-row"><input type="range" id="dsg-resultBadgeSize" min="11" max="20" value="15"><span class="val" id="dsg-resultBadgeSizeVal">15px</span></div>
+        </div>
+        <div class="field">
+          <label>메인 타이틀 크기</label>
+          <div class="range-row"><input type="range" id="dsg-resultTitleSize" min="17" max="32" value="24"><span class="val" id="dsg-resultTitleSizeVal">24px</span></div>
+        </div>
+        <div class="field">
+          <label>강조 문구 크기 (마감 현황, 47 포함)</label>
+          <div class="range-row"><input type="range" id="dsg-resultUrgencySize" min="13" max="29" value="23"><span class="val" id="dsg-resultUrgencySizeVal">23px</span></div>
+        </div>
+        <div class="field">
+          <label>본문(행동 유도 문구) 크기</label>
+          <div class="range-row"><input type="range" id="dsg-resultBodySize" min="12" max="27" value="21"><span class="val" id="dsg-resultBodySizeVal">21px</span></div>
+        </div>
+        <div class="field">
+          <label>하단 화살표 크기</label>
+          <div class="range-row"><input type="range" id="dsg-resultArrowSize" min="14" max="40" value="26"><span class="val" id="dsg-resultArrowSizeVal">26px</span></div>
+        </div>
+      </div>
+
+      <div class="card-box">
+        <h3>결과 화면 색상</h3>
+        <div class="field">
+          <label>메인 타이틀 색상</label>
+          <div class="color-row">
+            <input type="color" id="dsg-resultTitleColor">
+            <input type="text" id="dsg-resultTitleColorText">
+          </div>
+        </div>
+        <div class="field">
+          <label>강조 문구 색상 (숫자 제외 나머지 글자)</label>
+          <div class="color-row">
+            <input type="color" id="dsg-resultUrgencyColor">
+            <input type="text" id="dsg-resultUrgencyColorText">
+          </div>
+        </div>
+        <div class="field">
+          <label>강조 숫자 색상 (예: 47 — 기본 빨강)</label>
+          <div class="color-row">
+            <input type="color" id="dsg-resultNumColor">
+            <input type="text" id="dsg-resultNumColorText">
+          </div>
+        </div>
+        <div class="field">
+          <label>본문 색상</label>
+          <div class="color-row">
+            <input type="color" id="dsg-resultBodyColor">
+            <input type="text" id="dsg-resultBodyColorText">
+          </div>
+        </div>
+        <div class="field">
+          <label>하단 화살표 색상 (기본 빨강)</label>
+          <div class="color-row">
+            <input type="color" id="dsg-resultArrowColor">
+            <input type="text" id="dsg-resultArrowColorText">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>상단 뱃지 글자 색상</label>
+          <div class="color-row">
+            <input type="color" id="dsg-resultTopBadgeColor">
+            <input type="text" id="dsg-resultTopBadgeColorText">
+          </div>
+        </div>
+      </div>
+
+      <div class="card-box">
+        <h3>결과 화면 위치 조정 (상하 이동)</h3>
+        <div class="field">
+          <label>상단 뱃지 위치</label>
+          <div class="range-row"><input type="range" id="dsg-resultTopBadgePosY" min="-30" max="30" value="0"><span class="val" id="dsg-resultTopBadgePosYVal">0px</span></div>
+        </div>
+        <div class="field">
+          <label>메인 타이틀 위치</label>
+          <div class="range-row"><input type="range" id="dsg-resultTitlePosY" min="-30" max="30" value="0"><span class="val" id="dsg-resultTitlePosYVal">0px</span></div>
+        </div>
+        <div class="field">
+          <label>강조 문구 위치 (47 포함)</label>
+          <div class="range-row"><input type="range" id="dsg-resultUrgencyPosY" min="-30" max="30" value="0"><span class="val" id="dsg-resultUrgencyPosYVal">0px</span></div>
+        </div>
+        <div class="field">
+          <label>본문 위치</label>
+          <div class="range-row"><input type="range" id="dsg-resultBodyPosY" min="-30" max="30" value="0"><span class="val" id="dsg-resultBodyPosYVal">0px</span></div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>하단 화살표 위치</label>
+          <div class="range-row"><input type="range" id="dsg-resultArrowPosY" min="-30" max="30" value="0"><span class="val" id="dsg-resultArrowPosYVal">0px</span></div>
+        </div>
+      </div>
+
+      <div class="card-box">
+        <h3>결과 화면 강조 모션</h3>
+        <div class="field">
+          <label>숫자(예: 47)와 하단 화살표에 적용될 모션</label>
+          <select id="dsg-resultAnim">
+            <option value="blink">깜빡깜빡 (기본, 그라데이션 없이 딱딱 켜짐/꺼짐)</option>
+            <option value="pulse">커졌다 작아졌다</option>
+            <option value="bounce">위아래로 통통 튀기</option>
+            <option value="none">애니메이션 없음</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-panel">
+    <div class="device-toolbar">
+      <button class="btn small" data-w="375">375px</button>
+      <button class="btn small primary" data-w="390">390px</button>
+      <button class="btn small" data-w="430">430px</button>
+      <button class="btn small" data-w="800">800px</button>
+    </div>
+    <div class="device-row">
+      <div class="device-col">
+        <div class="device-label">1페이지 (질문 화면)</div>
+        <div class="device-frame" id="deviceFrame" style="width:390px;">
+          <iframe id="previewFrame"></iframe>
+        </div>
+      </div>
+      <div class="device-col">
+        <div class="device-label">2페이지 (결과 화면)</div>
+        <div class="device-frame" id="deviceFrame2" style="width:390px;">
+          <iframe id="previewFrame2"></iframe>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button class="btn small" id="btnPreviewFirst">🔄 초기화 (처음부터 보기)</button>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<input type="file" id="fileLoad" accept="application/json" style="display:none;">
+
+<script>
+/* =========================================================
+   상태(State) 및 기본 샘플 데이터
+   ========================================================= */
+function uid(prefix){ return (prefix||'id') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function defaultState(){
+  return presetSmileLasik();
+}
+
+function presetSmileLasik(){
+  var r1 = uid('res');
+  var q1 = uid('q');
+  var qResult = uid('q');
+  return {
+    design:{
+      primary:'#0973cf',
+      bg:'#f5faff',
+      qSize:24, bodySize:16, optSize:18, btnSize:21,
+      cardRadius:18, btnRadius:16, cardGap:15, pad:20,
+      showProgress:true, showQNum:true, showIcons:true, autoAdvance:false, showOptionDesc:false, resultAnimation:'blink',
+      resultTopBadgeSize:15, resultTopBadgeColor:'#0066FF', resultTopBadgePosY:0,
+      resultTitleSize:24, resultTitleColor:'#111827', resultTitlePosY:0,
+      resultUrgencySize:23, resultUrgencyColor:'#171b2d', resultUrgencyPosY:0,
+      resultNumColor:'#DC2626',
+      resultBodySize:21, resultBodyColor:'#4B5563', resultBodyPosY:0,
+      resultArrowSize:26, resultArrowColor:'#DC2626', resultArrowPosY:0
+    },
+    results:[
+      {id:r1, emoji:'🎉', topBadge:'우선 선정 대상', badge:'선착순 마감 임박 (47/50명 완료)', title:'20주년 특별 지원 대상자로 선정!', body:'지금 혜택을 우선 확보하세요', note:'※ 단순 혜택 확인이며, 이후 추가 진행 의무는 없습니다'}
+    ],
+    questions:[
+      {
+        id:q1, type:'single',
+        title:'가장 끌리는 혜택은?(필수)',
+        description:'해당하는 항목을 선택해 주세요',
+        buttonText:'내 맞춤 혜택 확인하기 ▶',
+        options:[
+          {id:uid('o'), icon:'🎁', title:'20주년 스페셜 혜택가', desc:'이번 달 한정 특별 지원가 우선 적용', resultId:r1},
+          {id:uid('o'), icon:'🔬', title:'70가지 정밀검사 무료', desc:'수술 전 비용 부담 없는 안심 정밀 검진', resultId:r1},
+          {id:uid('o'), icon:'⚡', title:'다음 날 바로 일상 복귀', desc:'출근·약속 걱정 없는 빠른 회복력', resultId:r1}
+        ]
+      },
+      {
+        id:qResult, type:'result',
+        title:'', description:'', buttonText:'다음', showNextButton:false
+      }
+    ]
+  };
+}
+
+function presetYouthMV(){
+  var r1 = uid('res');
+  var q1 = uid('q');
+  var qResult = uid('q');
+  return {
+    design:{
+      primary:'#0973cf',
+      bg:'#f5faff',
+      qSize:24, bodySize:16, optSize:18, btnSize:21,
+      cardRadius:18, btnRadius:16, cardGap:15, pad:20,
+      showProgress:true, showQNum:true, showIcons:true, autoAdvance:false, showOptionDesc:false, resultAnimation:'blink',
+      resultTopBadgeSize:15, resultTopBadgeColor:'#0066FF', resultTopBadgePosY:0,
+      resultTitleSize:24, resultTitleColor:'#111827', resultTitlePosY:0,
+      resultUrgencySize:23, resultUrgencyColor:'#171b2d', resultUrgencyPosY:0,
+      resultNumColor:'#DC2626',
+      resultBodySize:21, resultBodyColor:'#4B5563', resultBodyPosY:0,
+      resultArrowSize:26, resultArrowColor:'#DC2626', resultArrowPosY:0
+    },
+    results:[
+      {id:r1, emoji:'🎉', topBadge:'우선 배정 대상', badge:'선착순 마감 임박 (47/50명 완료)', title:'MV 특별 캐스팅 대상자로 선정!', body:'지금 마지막 자리를 우선 확보하세요', note:'※ 단순 혜택 확인이며, 이후 추가 진행 의무는 없습니다'}
+    ],
+    questions:[
+      {
+        id:q1, type:'single',
+        title:'가장 끌리는 혜택은?(필수)',
+        description:'원하는 촬영 혜택을 1개 선택해 주세요',
+        buttonText:'내 맞춤 혜택 확인하기 ▶',
+        options:[
+          {id:uid('o'), icon:'👀', title:'아이돌 실물 1열 직관 성덕 기회', desc:'', resultId:r1},
+          {id:uid('o'), icon:'📸', title:'스토리 박제 각! DM 폭발 인생샷', desc:'', resultId:r1},
+          {id:uid('o'), icon:'👯', title:'혼자 NO! 내 찐친과 동반 출연', desc:'', resultId:r1}
+        ]
+      },
+      {
+        id:qResult, type:'result',
+        title:'', description:'', buttonText:'다음', showNextButton:false
+      }
+    ]
+  };
+}
+
+var STATE = null;
+var currentQId = null;
+var previewTimer = null;
+
+var TYPE_LABELS = {
+  single:'단일 선택형', multi:'복수 선택형', yesno:'YES / NO', text:'텍스트 입력',
+  name:'이름 입력', phone:'연락처 입력', dropdown:'드롭다운 선택', agree:'개인정보 동의',
+  result:'결과 화면', form:'신청폼'
+};
+
+/* =========================================================
+   저장 / 불러오기 / 초기화
+   ========================================================= */
+var STORAGE_KEY = 'ts_survey_generator_state_v1';
+
+function saveToStorage(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }catch(e){}
+}
+function loadFromStorage(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ return JSON.parse(raw); }
+  }catch(e){}
+  return null;
+}
+
+/* 이전에 저장된 설정(localStorage)에 결과값이 하나도 없거나,
+   선택지가 삭제된 결과를 가리키고 있어서 "결과값 없음" 상태가 되는 경우를 대비해
+   기본 결과값을 자동으로 등록/복구합니다. */
+function ensureDefaultResult(){
+  if(!STATE.results){ STATE.results = []; }
+  if(STATE.results.length === 0){
+    var newResult = {
+      id: uid('res'),
+      emoji: '🎉',
+      topBadge: '우선 선정 대상',
+      badge: '선착순 마감 임박 (47/50명 완료)',
+      title: '20주년 특별 지원 대상자로 선정!',
+      body: '지금 혜택을 우선 확보하세요',
+      note: '※ 단순 혜택 확인이며, 이후 추가 진행 의무는 없습니다'
+    };
+    STATE.results.push(newResult);
+    var validIds = {};
+    STATE.results.forEach(function(r){ validIds[r.id] = true; });
+    STATE.questions.forEach(function(q){
+      if(q.options){
+        q.options.forEach(function(o){ if(!o.resultId || !validIds[o.resultId]){ o.resultId = newResult.id; } });
+      }
+      if(q.type === 'yesno'){
+        if(!q.yesResultId || !validIds[q.yesResultId]) q.yesResultId = newResult.id;
+        if(!q.noResultId || !validIds[q.noResultId]) q.noResultId = newResult.id;
+      }
+    });
+    saveToStorage();
+  }
+}
+
+function normalizeResultQuestions(state){
+  if(!state || !state.questions) return;
+  state.questions.forEach(function(q){
+    if(q.type === 'result' && typeof q.showNextButton === 'undefined'){
+      q.showNextButton = false;
+    }
+  });
+}
+
+function migrateDesignDefaults(){
+  if(!STATE.design) return;
+  if(typeof STATE.design.showOptionDesc === 'undefined'){ STATE.design.showOptionDesc = true; }
+  if(typeof STATE.design.resultAnimation === 'undefined'){ STATE.design.resultAnimation = 'blink'; }
+  var rDefaults = {
+    resultTopBadgeSize:15, resultTopBadgeColor:'#0066FF', resultTopBadgePosY:0,
+    resultTitleSize:24, resultTitleColor:'#111827', resultTitlePosY:0,
+    resultUrgencySize:23, resultUrgencyColor:'#171b2d', resultUrgencyPosY:0,
+    resultNumColor:'#DC2626',
+    resultBodySize:21, resultBodyColor:'#4B5563', resultBodyPosY:0,
+    resultArrowSize:26, resultArrowColor:'#DC2626', resultArrowPosY:0
+  };
+  Object.keys(rDefaults).forEach(function(k){
+    if(typeof STATE.design[k] === 'undefined'){ STATE.design[k] = rDefaults[k]; }
+  });
+}
+
+function init(){
+  STATE = defaultState();
+  ensureDefaultResult();
+  STATE.results.forEach(function(r){ if(typeof r.topBadge === 'undefined'){ r.topBadge = '우선 선정 대상'; } if(typeof r.note === 'undefined'){ r.note = ''; } });
+  migrateDesignDefaults();
+  normalizeResultQuestions(STATE);
+  if(STATE.questions && STATE.questions.length){ currentQId = STATE.questions[0].id; }
+  bindDesignInputs();
+  var toggleOptDesc = document.getElementById('toggleOptDesc');
+  if(toggleOptDesc){
+    toggleOptDesc.checked = STATE.design.showOptionDesc;
+    toggleOptDesc.addEventListener('change', function(){
+      STATE.design.showOptionDesc = toggleOptDesc.checked;
+      afterChange();
+      renderQuestionEditor();
+    });
+  }
+  renderAll();
+  schedulePreview();
+}
+
+function renderAll(){
+  renderQuestionList();
+  renderQuestionEditor();
+  renderResultsList();
+  syncDesignInputs();
+}
+
+/* =========================================================
+   질문 목록 렌더링
+   ========================================================= */
+function renderQuestionList(){
+  var wrap = document.getElementById('qlist');
+  wrap.innerHTML = '';
+  if(!STATE.questions.length){
+    wrap.innerHTML = '<div class="empty-hint">아직 질문이 없어요. 아래에서 질문을 추가해 보세요.</div>';
+    return;
+  }
+  STATE.questions.forEach(function(q, idx){
+    var item = document.createElement('div');
+    item.className = 'qitem' + (q.id === currentQId ? ' active' : '');
+    item.innerHTML =
+      '<div class="qnum">' + (idx+1) + '</div>' +
+      '<div class="qmeta">' +
+        '<div class="qtitle">' + (q.title ? escapeHtml(q.title) : '(' + TYPE_LABELS[q.type] + ')') + '</div>' +
+        '<div class="qtype">' + TYPE_LABELS[q.type] + '</div>' +
+      '</div>' +
+      '<div class="qactions">' +
+        '<button data-act="up" title="위로">▲</button>' +
+        '<button data-act="down" title="아래로">▼</button>' +
+        '<button data-act="dup" title="복제">⧉</button>' +
+        '<button data-act="del" title="삭제">✕</button>' +
+      '</div>';
+    item.addEventListener('click', function(e){
+      var act = e.target.getAttribute('data-act');
+      if(act){
+        e.stopPropagation();
+        handleQAction(q.id, act);
+        return;
+      }
+      currentQId = q.id;
+      renderQuestionList();
+      renderQuestionEditor();
+    });
+    wrap.appendChild(item);
+  });
+}
+
+function handleQAction(qid, act){
+  var idx = STATE.questions.findIndex(function(q){ return q.id === qid; });
+  if(idx === -1) return;
+  if(act === 'up' && idx > 0){
+    var tmp = STATE.questions[idx-1];
+    STATE.questions[idx-1] = STATE.questions[idx];
+    STATE.questions[idx] = tmp;
+  } else if(act === 'down' && idx < STATE.questions.length-1){
+    var tmp2 = STATE.questions[idx+1];
+    STATE.questions[idx+1] = STATE.questions[idx];
+    STATE.questions[idx] = tmp2;
+  } else if(act === 'dup'){
+    var copy = JSON.parse(JSON.stringify(STATE.questions[idx]));
+    copy.id = uid('q');
+    if(copy.options){
+      copy.options.forEach(function(o){ o.id = uid('o'); });
+    }
+    STATE.questions.splice(idx+1, 0, copy);
+    currentQId = copy.id;
+  } else if(act === 'del'){
+    if(!confirm('이 질문을 삭제할까요?')) return;
+    STATE.questions.splice(idx, 1);
+    if(currentQId === qid){
+      currentQId = STATE.questions.length ? STATE.questions[0].id : null;
+    }
+  }
+  afterChange();
+  renderQuestionList();
+  renderQuestionEditor();
+}
+
+document.getElementById('btnAddQ').addEventListener('click', function(){
+  var type = document.getElementById('newQType').value;
+  var q = { id: uid('q'), type: type, title:'', description:'', buttonText: type==='form' ? '상담 신청하기' : '다음' };
+  if(type === 'single' || type === 'multi' || type === 'dropdown'){
+    q.options = [
+      {id:uid('o'), icon:'✅', title:'선택지 1', desc:'', resultId:''},
+      {id:uid('o'), icon:'✅', title:'선택지 2', desc:'', resultId:''}
+    ];
+  }
+  if(type === 'yesno'){
+    q.yesLabel = '예'; q.noLabel = '아니오'; q.yesResultId=''; q.noResultId='';
+  }
+  if(type === 'agree'){
+    q.agreeText = '개인정보 수집 및 이용에 동의합니다';
+  }
+  if(type === 'form'){
+    q.fields = { name:true, phone:true, age:true };
+    q.agreeText = '개인정보 취급 방침 전체 동의';
+    q.useCustomCode = false;
+    q.customCode = '';
+  }
+  if(type === 'result'){
+    q.showNextButton = false;
+  }
+  STATE.questions.push(q);
+  currentQId = q.id;
+  afterChange();
+  renderQuestionList();
+  renderQuestionEditor();
+});
+
+/* =========================================================
+   질문 편집기 렌더링
+   ========================================================= */
+function getCurrentQ(){
+  return STATE.questions.find(function(q){ return q.id === currentQId; });
+}
+
+function renderQuestionEditor(){
+  var box = document.getElementById('qEditor');
+  var q = getCurrentQ();
+  if(!q){
+    box.innerHTML = '<div class="empty-hint">왼쪽 목록에서 질문을 선택하거나 새로 추가해 주세요.</div>';
+    return;
+  }
+  var html = '';
+  html += '<div class="field"><label>질문 유형: ' + TYPE_LABELS[q.type] + '</label></div>';
+
+  if(q.type !== 'result'){
+    html += '<div class="field"><label>제목</label><input type="text" id="ed-title" value="' + attr(q.title) + '"></div>';
+    html += '<div class="field"><label>설명 (안내 문구)</label><textarea id="ed-desc">' + escapeHtml(q.description||'') + '</textarea></div>';
+  }
+
+  if(['single','multi','yesno','dropdown','agree','form'].indexOf(q.type) !== -1){
+    html += '<div class="field"><label>버튼 문구</label><input type="text" id="ed-btn" value="' + attr(q.buttonText||'다음') + '"></div>';
+  }
+
+  if(q.type === 'result'){
+    html += '<div class="toggle-row" style="background:#fff;border:1px solid var(--admin-border);border-radius:10px;padding:10px 14px;margin-bottom:12px;">';
+    html += '<span>다음 버튼 표시 (off 시 하단에 빨간 화살표 표시)</span>';
+    html += '<label class="switch"><input type="checkbox" id="ed-r-showNext" ' + (q.showNextButton?'checked':'') + '><span class="slider"></span></label>';
+    html += '</div>';
+    html += '<div class="field" id="ed-r-btnWrap" style="' + (q.showNextButton ? '' : 'display:none;') + '">';
+    html += '<label>버튼 문구</label><input type="text" id="ed-btn" value="' + attr(q.buttonText||'다음') + '">';
+    html += '</div>';
+  }
+
+  if(q.type === 'single' || q.type === 'multi' || q.type === 'dropdown'){
+    html += '<h3 style="font-size:14px;margin:14px 0 8px;">선택지</h3>';
+    html += '<div id="optList">' + renderOptionsEditor(q) + '</div>';
+    html += '<button class="btn" id="btnAddOpt">+ 선택지 추가</button>';
+  }
+
+  if(q.type === 'yesno'){
+    html += '<div class="field-row">';
+    html += '<div class="field"><label>예 버튼 문구</label><input type="text" id="ed-yesLabel" value="' + attr(q.yesLabel||'예') + '"></div>';
+    html += '<div class="field"><label>아니오 버튼 문구</label><input type="text" id="ed-noLabel" value="' + attr(q.noLabel||'아니오') + '"></div>';
+    html += '</div>';
+    html += '<div class="field-row">';
+    html += '<div class="field"><label>예 선택 시 결과</label>' + resultSelectHtml('ed-yesResult', q.yesResultId) + '</div>';
+    html += '<div class="field"><label>아니오 선택 시 결과</label>' + resultSelectHtml('ed-noResult', q.noResultId) + '</div>';
+    html += '</div>';
+  }
+
+  if(q.type === 'agree'){
+    html += '<div class="field"><label>동의 문구</label><input type="text" id="ed-agreeText" value="' + attr(q.agreeText||'') + '"></div>';
+  }
+
+  if(q.type === 'form'){
+    html += '<h3 style="font-size:14px;margin:14px 0 8px;">신청폼에 포함할 항목</h3>';
+    html += '<div class="toggle-row"><span>이름</span><label class="switch"><input type="checkbox" id="ed-f-name" ' + (q.fields.name?'checked':'') + '><span class="slider"></span></label></div>';
+    html += '<div class="toggle-row"><span>전화번호</span><label class="switch"><input type="checkbox" id="ed-f-phone" ' + (q.fields.phone?'checked':'') + '><span class="slider"></span></label></div>';
+    html += '<div class="toggle-row"><span>나이</span><label class="switch"><input type="checkbox" id="ed-f-age" ' + (q.fields.age?'checked':'') + '><span class="slider"></span></label></div>';
+    html += '<div class="field" style="margin-top:10px;"><label>개인정보 동의 문구</label><input type="text" id="ed-agreeText2" value="' + attr(q.agreeText||'') + '"></div>';
+
+    html += '<h3 style="font-size:14px;margin:18px 0 8px;">커스텀 입력폼 코드</h3>';
+    html += '<div class="toggle-row"><span>커스텀 코드 사용 (켜면 아래 코드가 이름/전화/나이 항목 대신 표시돼요)</span><label class="switch"><input type="checkbox" id="ed-f-useCustom" ' + (q.useCustomCode?'checked':'') + '><span class="slider"></span></label></div>';
+    html += '<div class="field" id="ed-customCodeWrap" style="margin-top:8px;' + (q.useCustomCode ? '' : 'display:none;') + '">';
+    html += '<label>입력폼 HTML 코드</label>';
+    html += '<textarea id="ed-customCode" rows="7" style="font-family:monospace;font-size:12.5px;" placeholder="예: <label class=\'ts-field-label\'>이메일</label><input class=\'ts-input\' id=\'tsEmail\' type=\'email\' placeholder=\'이메일 주소\'>">' + escapeHtml(q.customCode||'') + '</textarea>';
+    html += '<div style="font-size:12px;color:var(--admin-sub);margin-top:6px;">입력한 코드가 그대로 설문 화면에 삽입됩니다. HTML 태그를 직접 작성해 주세요.</div>';
+    html += '</div>';
+  }
+
+  box.innerHTML = html;
+  attachEditorHandlers(q);
+}
+
+function resultSelectHtml(id, selected){
+  var html = '<select id="' + id + '"><option value="">(결과 연결 안 함)</option>';
+  STATE.results.forEach(function(r){
+    html += '<option value="' + r.id + '"' + (r.id === selected ? ' selected' : '') + '>' + escapeHtml(r.title || '(제목 없음)') + '</option>';
+  });
+  html += '</select>';
+  return html;
+}
+
+function renderOptionsEditor(q){
+  var html = '';
+  q.options.forEach(function(o, idx){
+    html += '<div class="opt-editor" data-oid="' + o.id + '">';
+    html += '<div class="opt-head">';
+    html += '<input type="text" class="icon-input opt-icon" value="' + attr(o.icon||'') + '" placeholder="🎁">';
+    html += '<input type="text" class="opt-title" value="' + attr(o.title||'') + '" placeholder="선택지 제목" style="flex:1;padding:8px;border:1px solid var(--admin-border);border-radius:7px;">';
+    html += '<button class="btn small opt-up" title="위로">▲</button>';
+    html += '<button class="btn small opt-down" title="아래로">▼</button>';
+    html += '<button class="btn small danger opt-del" title="삭제">✕</button>';
+    html += '</div>';
+    html += '<textarea class="opt-desc" placeholder="선택지 설명 (선택)" style="width:100%;padding:8px;border:1px solid var(--admin-border);border-radius:7px;font-size:13px;min-height:40px;' + (STATE.design.showOptionDesc ? '' : 'display:none;') + '">' + escapeHtml(o.desc||'') + '</textarea>';
+    if(q.type !== 'multi'){
+      html += '<div style="margin-top:6px;"><label style="font-size:12px;color:var(--admin-sub);display:block;margin-bottom:4px;">이 선택지 결과 연결</label>' + resultSelectHtml('optres_' + o.id, o.resultId).replace('<select ', '<select class="opt-result" ') + '</div>';
+    }
+    html += '</div>';
+  });
+  return html;
+}
+
+function attachEditorHandlers(q){
+  var t = document.getElementById('ed-title');
+  if(t) t.addEventListener('input', function(){ q.title = t.value; afterChange(); renderQuestionList(); });
+  var d = document.getElementById('ed-desc');
+  if(d) d.addEventListener('input', function(){ q.description = d.value; afterChange(); });
+  var b = document.getElementById('ed-btn');
+  if(b) b.addEventListener('input', function(){ q.buttonText = b.value; afterChange(); });
+
+  var rsn = document.getElementById('ed-r-showNext');
+  if(rsn) rsn.addEventListener('change', function(){
+    q.showNextButton = rsn.checked;
+    var wrap = document.getElementById('ed-r-btnWrap');
+    if(wrap) wrap.style.display = rsn.checked ? '' : 'none';
+    afterChange();
+  });
+
+  var yl = document.getElementById('ed-yesLabel');
+  if(yl) yl.addEventListener('input', function(){ q.yesLabel = yl.value; afterChange(); });
+  var nl = document.getElementById('ed-noLabel');
+  if(nl) nl.addEventListener('input', function(){ q.noLabel = nl.value; afterChange(); });
+  var yr = document.getElementById('ed-yesResult');
+  if(yr) yr.addEventListener('change', function(){ q.yesResultId = yr.value; afterChange(); });
+  var nr = document.getElementById('ed-noResult');
+  if(nr) nr.addEventListener('change', function(){ q.noResultId = nr.value; afterChange(); });
+
+  var at = document.getElementById('ed-agreeText');
+  if(at) at.addEventListener('input', function(){ q.agreeText = at.value; afterChange(); });
+  var at2 = document.getElementById('ed-agreeText2');
+  if(at2) at2.addEventListener('input', function(){ q.agreeText = at2.value; afterChange(); });
+
+  var fn = document.getElementById('ed-f-name');
+  if(fn) fn.addEventListener('change', function(){ q.fields.name = fn.checked; afterChange(); });
+  var fp = document.getElementById('ed-f-phone');
+  if(fp) fp.addEventListener('change', function(){ q.fields.phone = fp.checked; afterChange(); });
+  var fa = document.getElementById('ed-f-age');
+  if(fa) fa.addEventListener('change', function(){ q.fields.age = fa.checked; afterChange(); });
+
+  var fc = document.getElementById('ed-f-useCustom');
+  if(fc) fc.addEventListener('change', function(){
+    q.useCustomCode = fc.checked;
+    var wrap = document.getElementById('ed-customCodeWrap');
+    if(wrap) wrap.style.display = fc.checked ? '' : 'none';
+    afterChange();
+  });
+  var cc = document.getElementById('ed-customCode');
+  if(cc) cc.addEventListener('input', function(){ q.customCode = cc.value; afterChange(); });
+
+  var addOpt = document.getElementById('btnAddOpt');
+  if(addOpt) addOpt.addEventListener('click', function(){
+    q.options.push({id:uid('o'), icon:'✅', title:'새 선택지', desc:'', resultId:''});
+    afterChange();
+    renderQuestionEditor();
+  });
+
+  if(q.options){
+    document.querySelectorAll('#optList .opt-editor').forEach(function(el){
+      var oid = el.getAttribute('data-oid');
+      var opt = q.options.find(function(o){ return o.id === oid; });
+      el.querySelector('.opt-icon').addEventListener('input', function(e){ opt.icon = e.target.value; afterChange(); });
+      el.querySelector('.opt-title').addEventListener('input', function(e){ opt.title = e.target.value; afterChange(); renderQuestionList(); });
+      el.querySelector('.opt-desc').addEventListener('input', function(e){ opt.desc = e.target.value; afterChange(); });
+      var resSel = el.querySelector('.opt-result');
+      if(resSel) resSel.addEventListener('change', function(e){ opt.resultId = e.target.value; afterChange(); });
+      el.querySelector('.opt-del').addEventListener('click', function(){
+        if(q.options.length <= 1){ alert('선택지는 최소 1개 이상 있어야 해요.'); return; }
+        q.options = q.options.filter(function(o){ return o.id !== oid; });
+        afterChange();
+        renderQuestionEditor();
+      });
+      el.querySelector('.opt-up').addEventListener('click', function(){
+        var i = q.options.findIndex(function(o){ return o.id === oid; });
+        if(i > 0){ var tmp = q.options[i-1]; q.options[i-1] = q.options[i]; q.options[i] = tmp; afterChange(); renderQuestionEditor(); }
+      });
+      el.querySelector('.opt-down').addEventListener('click', function(){
+        var i = q.options.findIndex(function(o){ return o.id === oid; });
+        if(i < q.options.length-1){ var tmp = q.options[i+1]; q.options[i+1] = q.options[i]; q.options[i] = tmp; afterChange(); renderQuestionEditor(); }
+      });
+    });
+  }
+}
+
+/* =========================================================
+   결과 관리 렌더링
+   ========================================================= */
+function renderResultsList(){
+  var wrap = document.getElementById('resultsList');
+  wrap.innerHTML = '';
+  if(!STATE.results.length){
+    wrap.innerHTML = '<div class="empty-hint">아직 결과가 없어요.</div>';
+  }
+  STATE.results.forEach(function(r){
+    var el = document.createElement('div');
+    el.className = 'result-block';
+    el.innerHTML =
+      '<div class="rhead"><strong>' + escapeHtml(r.title || '(제목 없음)') + '</strong><button class="btn small danger" data-del="' + r.id + '">삭제</button></div>' +
+      '<div class="field-row">' +
+        '<div class="field" style="max-width:70px;"><label>상단 아이콘</label><input type="text" class="r-emoji" value="' + attr(r.emoji) + '"></div>' +
+        '<div class="field" style="max-width:130px;"><label>뱃지(파란 캡슐)</label><input type="text" class="r-topbadge" value="' + attr(r.topBadge||'') + '"></div>' +
+        '<div class="field" style="flex:2;"><label>메인 타이틀</label><input type="text" class="r-title" value="' + attr(r.title) + '"></div>' +
+      '</div>' +
+      '<div class="field"><label>서브 텍스트 1 (마감 현황 · 레드)</label><input type="text" class="r-badge" value="' + attr(r.badge) + '"></div>' +
+      '<div class="field"><label>서브 텍스트 2 (행동 유도 · 그레이)</label><textarea class="r-body">' + escapeHtml(r.body||'') + '</textarea></div>' +
+      '<div class="field"><label>안내 문구 (작은 글씨, 화살표 바로 위)</label><textarea class="r-note" placeholder="예: ※ 단순 혜택 확인이며, 이후 추가 진행 의무는 없습니다">' + escapeHtml(r.note||'') + '</textarea></div>';
+    wrap.appendChild(el);
+    el.querySelector('.r-emoji').addEventListener('input', function(e){ r.emoji = e.target.value; afterChange(); });
+    el.querySelector('.r-topbadge').addEventListener('input', function(e){ r.topBadge = e.target.value; afterChange(); });
+    el.querySelector('.r-badge').addEventListener('input', function(e){ r.badge = e.target.value; afterChange(); });
+    el.querySelector('.r-title').addEventListener('input', function(e){ r.title = e.target.value; afterChange(); el.querySelector('strong').textContent = r.title || '(제목 없음)'; renderQuestionEditor(); });
+    el.querySelector('.r-body').addEventListener('input', function(e){ r.body = e.target.value; afterChange(); });
+    el.querySelector('.r-note').addEventListener('input', function(e){ r.note = e.target.value; afterChange(); });
+    el.querySelector('[data-del]').addEventListener('click', function(){
+      if(!confirm('이 결과를 삭제할까요? 연결된 선택지의 결과 연결이 해제됩니다.')) return;
+      STATE.results = STATE.results.filter(function(x){ return x.id !== r.id; });
+      STATE.questions.forEach(function(q){
+        if(q.options) q.options.forEach(function(o){ if(o.resultId === r.id) o.resultId=''; });
+        if(q.yesResultId === r.id) q.yesResultId='';
+        if(q.noResultId === r.id) q.noResultId='';
+      });
+      afterChange();
+      renderResultsList();
+      renderQuestionEditor();
+    });
+  });
+}
+
+document.getElementById('btnAddResult').addEventListener('click', function(){
+  STATE.results.push({id:uid('res'), emoji:'🎉', topBadge:'뱃지', badge:'안내', title:'새 결과', body:''});
+  afterChange();
+  renderResultsList();
+});
+
+/* =========================================================
+   디자인 설정 바인딩
+   ========================================================= */
+function bindDesignInputs(){
+  var map = [
+    ['dsg-primary','primary','color'], ['dsg-primaryText','primary','text'],
+    ['dsg-bg','bg','color'], ['dsg-bgText','bg','text'],
+    ['dsg-qsize','qSize','range'], ['dsg-bodysize','bodySize','range'],
+    ['dsg-optsize','optSize','range'], ['dsg-btnsize','btnSize','range'],
+    ['dsg-cardradius','cardRadius','range'], ['dsg-btnradius','btnRadius','range'],
+    ['dsg-cardgap','cardGap','range'], ['dsg-pad','pad','range'],
+    ['dsg-resultBadgeSize','resultTopBadgeSize','range'],
+    ['dsg-resultTitleSize','resultTitleSize','range'],
+    ['dsg-resultUrgencySize','resultUrgencySize','range'],
+    ['dsg-resultBodySize','resultBodySize','range'],
+    ['dsg-resultArrowSize','resultArrowSize','range'],
+    ['dsg-resultTopBadgePosY','resultTopBadgePosY','range'],
+    ['dsg-resultTitlePosY','resultTitlePosY','range'],
+    ['dsg-resultUrgencyPosY','resultUrgencyPosY','range'],
+    ['dsg-resultBodyPosY','resultBodyPosY','range'],
+    ['dsg-resultArrowPosY','resultArrowPosY','range'],
+    ['dsg-resultTitleColor','resultTitleColor','color'], ['dsg-resultTitleColorText','resultTitleColor','text'],
+    ['dsg-resultUrgencyColor','resultUrgencyColor','color'], ['dsg-resultUrgencyColorText','resultUrgencyColor','text'],
+    ['dsg-resultNumColor','resultNumColor','color'], ['dsg-resultNumColorText','resultNumColor','text'],
+    ['dsg-resultBodyColor','resultBodyColor','color'], ['dsg-resultBodyColorText','resultBodyColor','text'],
+    ['dsg-resultArrowColor','resultArrowColor','color'], ['dsg-resultArrowColorText','resultArrowColor','text'],
+    ['dsg-resultTopBadgeColor','resultTopBadgeColor','color'], ['dsg-resultTopBadgeColorText','resultTopBadgeColor','text']
+  ];
+  var colorPairs = {
+    'dsg-primary':'dsg-primaryText', 'dsg-primaryText':'dsg-primary',
+    'dsg-bg':'dsg-bgText', 'dsg-bgText':'dsg-bg',
+    'dsg-resultTitleColor':'dsg-resultTitleColorText', 'dsg-resultTitleColorText':'dsg-resultTitleColor',
+    'dsg-resultUrgencyColor':'dsg-resultUrgencyColorText', 'dsg-resultUrgencyColorText':'dsg-resultUrgencyColor',
+    'dsg-resultNumColor':'dsg-resultNumColorText', 'dsg-resultNumColorText':'dsg-resultNumColor',
+    'dsg-resultBodyColor':'dsg-resultBodyColorText', 'dsg-resultBodyColorText':'dsg-resultBodyColor',
+    'dsg-resultArrowColor':'dsg-resultArrowColorText', 'dsg-resultArrowColorText':'dsg-resultArrowColor',
+    'dsg-resultTopBadgeColor':'dsg-resultTopBadgeColorText', 'dsg-resultTopBadgeColorText':'dsg-resultTopBadgeColor'
+  };
+  map.forEach(function(m){
+    var el = document.getElementById(m[0]);
+    if(!el) return;
+    el.addEventListener('input', function(){
+      if(m[2] === 'range'){
+        STATE.design[m[1]] = parseInt(el.value, 10);
+        var lbl = document.getElementById(m[0] + 'Val');
+        if(lbl) lbl.textContent = el.value + 'px';
+        if(m[1] === 'qSize') document.getElementById('dsg-qsize').value = el.value;
+      } else {
+        STATE.design[m[1]] = el.value;
+        var pairId = colorPairs[m[0]];
+        if(pairId) document.getElementById(pairId).value = el.value;
+      }
+      afterChange();
+    });
+  });
+
+  ['dsg-showProgress','dsg-showQNum','dsg-showIcons','dsg-autoAdvance'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', function(e){
+      var key = id === 'dsg-showProgress' ? 'showProgress' : id === 'dsg-showQNum' ? 'showQNum' : id === 'dsg-showIcons' ? 'showIcons' : 'autoAdvance';
+      STATE.design[key] = e.target.checked;
+      afterChange();
+    });
+  });
+
+  var resultAnimSel = document.getElementById('dsg-resultAnim');
+  if(resultAnimSel){
+    resultAnimSel.addEventListener('change', function(){
+      STATE.design.resultAnimation = resultAnimSel.value;
+      afterChange();
+    });
+  }
+}
+
+function syncDesignInputs(){
+  var d = STATE.design;
+  document.getElementById('dsg-primary').value = d.primary;
+  document.getElementById('dsg-primaryText').value = d.primary;
+  document.getElementById('dsg-bg').value = d.bg;
+  document.getElementById('dsg-bgText').value = d.bg;
+  document.getElementById('dsg-qsize').value = d.qSize; document.getElementById('dsg-qsizeVal').textContent = d.qSize + 'px';
+  document.getElementById('dsg-bodysize').value = d.bodySize; document.getElementById('dsg-bodysizeVal').textContent = d.bodySize + 'px';
+  document.getElementById('dsg-optsize').value = d.optSize; document.getElementById('dsg-optsizeVal').textContent = d.optSize + 'px';
+  document.getElementById('dsg-btnsize').value = d.btnSize; document.getElementById('dsg-btnsizeVal').textContent = d.btnSize + 'px';
+  document.getElementById('dsg-cardradius').value = d.cardRadius; document.getElementById('dsg-cardradiusVal').textContent = d.cardRadius + 'px';
+  document.getElementById('dsg-btnradius').value = d.btnRadius; document.getElementById('dsg-btnradiusVal').textContent = d.btnRadius + 'px';
+  document.getElementById('dsg-cardgap').value = d.cardGap; document.getElementById('dsg-cardgapVal').textContent = d.cardGap + 'px';
+  document.getElementById('dsg-pad').value = d.pad; document.getElementById('dsg-padVal').textContent = d.pad + 'px';
+  var resultAnimSel2 = document.getElementById('dsg-resultAnim');
+  if(resultAnimSel2){ resultAnimSel2.value = d.resultAnimation || 'blink'; }
+  function syncRange(id, val){
+    var input = document.getElementById(id);
+    var lbl = document.getElementById(id + 'Val');
+    if(input) input.value = val;
+    if(lbl) lbl.textContent = val + 'px';
+  }
+  function syncColor(colorId, textId, val){
+    var c = document.getElementById(colorId), t = document.getElementById(textId);
+    if(c) c.value = val;
+    if(t) t.value = val;
+  }
+  syncRange('dsg-resultBadgeSize', d.resultTopBadgeSize);
+  syncRange('dsg-resultTitleSize', d.resultTitleSize);
+  syncRange('dsg-resultUrgencySize', d.resultUrgencySize);
+  syncRange('dsg-resultBodySize', d.resultBodySize);
+  syncRange('dsg-resultArrowSize', d.resultArrowSize);
+  syncRange('dsg-resultTopBadgePosY', d.resultTopBadgePosY||0);
+  syncRange('dsg-resultTitlePosY', d.resultTitlePosY||0);
+  syncRange('dsg-resultUrgencyPosY', d.resultUrgencyPosY||0);
+  syncRange('dsg-resultBodyPosY', d.resultBodyPosY||0);
+  syncRange('dsg-resultArrowPosY', d.resultArrowPosY||0);
+  syncColor('dsg-resultTitleColor', 'dsg-resultTitleColorText', d.resultTitleColor);
+  syncColor('dsg-resultUrgencyColor', 'dsg-resultUrgencyColorText', d.resultUrgencyColor);
+  syncColor('dsg-resultNumColor', 'dsg-resultNumColorText', d.resultNumColor);
+  syncColor('dsg-resultBodyColor', 'dsg-resultBodyColorText', d.resultBodyColor);
+  syncColor('dsg-resultArrowColor', 'dsg-resultArrowColorText', d.resultArrowColor);
+  syncColor('dsg-resultTopBadgeColor', 'dsg-resultTopBadgeColorText', d.resultTopBadgeColor);
+  document.getElementById('dsg-showProgress').checked = d.showProgress;
+  document.getElementById('dsg-showQNum').checked = d.showQNum;
+  document.getElementById('dsg-showIcons').checked = d.showIcons;
+  document.getElementById('dsg-autoAdvance').checked = d.autoAdvance;
+}
+
+/* =========================================================
+   유틸
+   ========================================================= */
+function escapeHtml(s){
+  return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function attr(s){
+  return escapeHtml(s).replace(/"/g,'&quot;');
+}
+function shadeColor(hex, percent){
+  hex = (hex||'#0973cf').replace('#','');
+  if(hex.length===3){ hex = hex.split('').map(function(c){return c+c;}).join(''); }
+  var num = parseInt(hex,16);
+  var r = (num >> 16) + Math.round(255*percent);
+  var g = ((num >> 8) & 0x00FF) + Math.round(255*percent);
+  var b = (num & 0x0000FF) + Math.round(255*percent);
+  r = Math.max(Math.min(255,r),0); g = Math.max(Math.min(255,g),0); b = Math.max(Math.min(255,b),0);
+  return '#' + (r.toString(16).padStart(2,'0')) + (g.toString(16).padStart(2,'0')) + (b.toString(16).padStart(2,'0'));
+}
+
+function afterChange(){
+  saveToStorage();
+  schedulePreview();
+}
+
+/* 설정을 고치는 즉시 미리보기에 그대로 반영되도록 디바운스 없이 바로 갱신합니다.
+   (UI 설정 값과 미리보기 화면이 항상 100% 동일하게 유지됩니다) */
+function schedulePreview(){
+  clearTimeout(previewTimer);
+  updatePreview();
+}
+
+/* =========================================================
+   위젯 코드 생성 (실제 내보내기 코드 = 미리보기와 100% 동일)
+   ========================================================= */
+function buildWidgetDocument(state, forPreview, startIndex){
+  startIndex = startIndex || 0;
+  if(state.questions && state.questions.length){
+    startIndex = Math.max(0, Math.min(startIndex, state.questions.length - 1));
+  } else {
+    startIndex = 0;
+  }
+  var id = 'tsSurv_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  var d = state.design;
+  var primaryDark = shadeColor(d.primary, -0.15);
+  var primaryLight = shadeColor(d.primary, 0.90);
+  var veryLightBg = d.bg;
+  var ALLOWED_ANIMS = ['blink','pulse','bounce','none'];
+  var resultAnim = ALLOWED_ANIMS.indexOf(d.resultAnimation) !== -1 ? d.resultAnimation : 'blink';
+
+  /* 기기 화면 폭에 따라 자동으로 축소/확대되는 반응형 크기 문자열 생성.
+     375px 기준 화면에서는 지정한 px 값 그대로, 더 좁은 화면에서는 비례해서 작아지고,
+     넓은 화면(태블릿/PC 미리보기)에서는 지정한 px 값 이상으로 커지지 않도록 상한을 둡니다. */
+  function rsz(px, minRatio){
+    minRatio = minRatio == null ? 0.72 : minRatio;
+    var minPx = Math.max(11, Math.round(px * minRatio));
+    var vw = (px / 3.75).toFixed(2);
+    return 'clamp(' + minPx + 'px, ' + vw + 'vw, ' + px + 'px)';
+  }
+
+  var css = [];
+  css.push('#' + id + '{max-width:800px;margin:0 auto;width:100%;box-sizing:border-box;padding:0 ' + rsz(d.pad, 0.6) + ';');
+  css.push('font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;');
+  css.push('background:' + veryLightBg + ';color:#171b2d;}');
+  css.push('#' + id + ' *{box-sizing:border-box;}');
+  css.push('#' + id + ' .ts-inner{padding:26px 0 34px;}');
+  css.push('#' + id + ' .ts-progress-label{font-size:13px;color:#6b7280;text-align:right;margin-bottom:8px;font-weight:600;}');
+  css.push('#' + id + ' .ts-progress-track{height:7px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-bottom:30px;}');
+  css.push('#' + id + ' .ts-progress-fill{height:100%;background:' + d.primary + ';border-radius:999px;transition:width .3s ease;}');
+  css.push('#' + id + ' .ts-eyebrow{display:inline-block;background:' + primaryLight + ';color:' + d.primary + ';font-size:13px;font-weight:800;padding:6px 14px;border-radius:999px;margin-bottom:14px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;}');
+  css.push('#' + id + ' .ts-q-title{font-size:' + rsz(d.qSize) + ';font-weight:850;line-height:1.35;text-align:center;color:#171b2d;margin:0 0 20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}');
+  css.push('#' + id + ' .ts-q-desc{font-size:' + rsz(d.bodySize, 0.85) + ';font-weight:600;color:#4b5563;text-align:center;line-height:1.5;margin:0 0 22px;white-space:normal;word-break:keep-all;}');
+  css.push('#' + id + ' .ts-options{display:flex;flex-direction:column;gap:' + d.cardGap + 'px;}');
+  css.push('#' + id + ' .ts-option{border:2px solid #e2e8f0;border-radius:' + d.cardRadius + 'px;background:#fff;padding:' + rsz(11, 0.7) + ';display:flex;align-items:flex-start;gap:14px;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;min-height:45px;}');
+  css.push('#' + id + ' .ts-option.no-desc{align-items:center;}');
+  css.push('#' + id + ' .ts-option:active{transform:scale(0.99);}');
+  css.push('#' + id + ' .ts-option.selected{border-color:' + d.primary + ';background:' + primaryLight + ';box-shadow:0 4px 14px rgba(0,0,0,.06);}');
+  css.push('#' + id + ' .ts-radio{width:24px;height:24px;border-radius:50%;border:2px solid #cbd5e1;flex-shrink:0;margin-top:2px;position:relative;background:#fff;}');
+  css.push('#' + id + ' .ts-option.selected .ts-radio{border-color:' + d.primary + ';}');
+  css.push('#' + id + ' .ts-option.selected .ts-radio:after{content:"";position:absolute;inset:4px;border-radius:50%;background:' + d.primary + ';}');
+  css.push('#' + id + ' .ts-check{width:24px;height:24px;border-radius:7px;border:2px solid #cbd5e1;flex-shrink:0;margin-top:2px;position:relative;background:#fff;}');
+  css.push('#' + id + ' .ts-option.selected .ts-check{border-color:' + d.primary + ';background:' + d.primary + ';}');
+  css.push('#' + id + ' .ts-option.selected .ts-check:after{content:"";position:absolute;left:7px;top:3px;width:6px;height:11px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(40deg);}');
+  css.push('#' + id + ' .ts-opt-icon{font-size:' + rsz(26, 0.75) + ';line-height:1;flex-shrink:0;margin-top:1px;}');
+  css.push('#' + id + ' .ts-opt-body{flex:1;min-width:0;}');
+  css.push('#' + id + ' .ts-opt-title{font-size:' + rsz(d.optSize, 0.62) + ';font-weight:800;color:#171b2d;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}');
+  css.push('#' + id + ' .ts-opt-desc{font-size:' + rsz(Math.max(14,d.optSize-4), 0.78) + ';line-height:1.5;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}');
+  css.push('#' + id + ' .ts-yesno{display:flex;gap:14px;}');
+  css.push('#' + id + ' .ts-yesno .ts-option{flex:1;justify-content:center;text-align:center;flex-direction:column;align-items:center;min-height:80px;}');
+  css.push('#' + id + ' .ts-field-label{display:block;font-size:' + rsz(d.bodySize, 0.8) + ';font-weight:700;color:#171b2d;margin-bottom:8px;}');
+  css.push('#' + id + ' .ts-input{width:100%;height:56px;font-size:' + rsz(Math.max(15,d.bodySize), 0.85) + ';padding:0 16px;border:2px solid #dbe5ef;border-radius:' + Math.min(14,d.cardRadius) + 'px;background:#fff;color:#171b2d;font-family:inherit;margin-bottom:18px;}');
+  css.push('#' + id + ' select.ts-input{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 20 20%27 fill=%27%236b7280%27><path d=%27M5 8l5 5 5-5z%27/></svg>");background-repeat:no-repeat;background-position:right 16px center;}');
+  css.push('#' + id + ' .ts-agree{display:flex;align-items:center;gap:10px;padding:18px;border:2px solid #dbe5ef;border-radius:' + Math.min(14,d.cardRadius) + 'px;cursor:pointer;margin-bottom:18px;}');
+  css.push('#' + id + ' .ts-agree input{width:20px;height:20px;flex-shrink:0;accent-color:' + d.primary + ';}');
+  css.push('#' + id + ' .ts-agree span{font-size:15px;color:#171b2d;font-weight:600;}');
+  css.push('#' + id + ' .ts-btn{width:100%;height:68px;border:none;border-radius:' + d.btnRadius + 'px;background:' + d.primary + ';color:#fff;font-size:' + rsz(d.btnSize, 0.68) + ';font-weight:800;cursor:pointer;margin-top:8px;transition:background .15s,transform .1s;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px;}');
+  css.push('#' + id + ' .ts-btn:hover{background:' + primaryDark + ';}');
+  css.push('#' + id + ' .ts-btn:active{transform:scale(.98);}');
+  css.push('#' + id + ' .ts-btn:disabled{opacity:.45;cursor:not-allowed;}');
+  css.push('#' + id + ' .ts-error{color:#dc2626;font-size:13.5px;margin:-10px 0 14px;}');
+  css.push('#' + id + ' .ts-form .ts-field-label{margin-bottom:4px;}');
+  css.push('#' + id + ' .ts-form .ts-input{height:44px;margin-bottom:10px;}');
+  css.push('#' + id + ' .ts-form .ts-agree{padding:12px 14px;margin-bottom:10px;}');
+  css.push('#' + id + ' .ts-form .ts-error{margin:-6px 0 10px;}');
+  css.push('#' + id + ' .ts-form .ts-btn{height:52px;margin-top:4px;}');
+  css.push('#' + id + ' .ts-result{display:flex;flex-direction:column;justify-content:center;text-align:center;padding:6px 0 10px;word-break:keep-all;}');
+  css.push('#' + id + ' .ts-result-spacer{flex:0 0 auto;min-height:28px;}');
+  css.push('#' + id + ' .ts-result-emoji{font-size:52px;margin-bottom:16px;line-height:1;}');
+  css.push('#' + id + ' .ts-result-topbadge{display:inline-block;background:#EBF5FF;color:' + (d.resultTopBadgeColor||'#0066FF') + ';font-weight:700;font-size:' + rsz(d.resultTopBadgeSize||15, 0.78) + ';padding:4px 14px;border-radius:20px;margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;transform:translateY(' + (d.resultTopBadgePosY||0) + 'px);}');
+  css.push('#' + id + ' .ts-result-title{font-size:' + rsz(d.resultTitleSize||24, 0.72) + ';font-weight:800;margin:0 0 12px;line-height:1.35;color:' + (d.resultTitleColor||'#111827') + ';letter-spacing:-0.5px;transform:translateY(' + (d.resultTitlePosY||0) + 'px);}');
+  css.push('#' + id + ' .ts-result-urgency{font-size:' + rsz(d.resultUrgencySize||23, 0.75) + ';font-weight:700;color:' + (d.resultUrgencyColor||'#171b2d') + ';letter-spacing:-0.3px;margin:0 0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateY(' + (d.resultUrgencyPosY||0) + 'px);}');
+  css.push('#' + id + ' .ts-result-body{font-size:' + rsz(d.resultBodySize||21, 0.8) + ';font-weight:600;line-height:1.6;color:' + (d.resultBodyColor||'#4B5563') + ';letter-spacing:-0.3px;margin:0 0 24px;white-space:pre-line;transform:translateY(' + (d.resultBodyPosY||0) + 'px);}');
+  css.push('#' + id + ' .ts-result-note{font-size:14px;font-weight:600;line-height:1.5;color:#6b7280;margin:18px 0 18px;white-space:pre-line;}');
+  css.push('#' + id + ' .ts-result-arrows{display:flex;justify-content:center;align-items:center;gap:26px;margin:10px 0 4px;transform:translateY(' + (d.resultArrowPosY||0) + 'px);}');
+  css.push('#' + id + ' .ts-result-arrows span{color:' + (d.resultArrowColor||'#DC2626') + ';font-size:' + rsz(d.resultArrowSize||26, 0.75) + ';line-height:1;display:inline-block;}');
+  css.push('#' + id + ' .ts-result-num{font-weight:800;display:inline-block;color:' + (d.resultNumColor||'#DC2626') + ';}');
+  css.push('@keyframes ' + id + '_blink{0%,49%{opacity:1;}50%,100%{opacity:0;}}');
+  css.push('@keyframes ' + id + '_pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.22);}}');
+  css.push('@keyframes ' + id + '_bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(6px);}}');
+  css.push('#' + id + ' .ts-anim-blink{animation:' + id + '_blink 1s steps(1,end) infinite;}');
+  css.push('#' + id + ' .ts-anim-pulse{animation:' + id + '_pulse 1s ease-in-out infinite;}');
+  css.push('#' + id + ' .ts-anim-bounce{animation:' + id + '_bounce .9s ease-in-out infinite;}');
+  css.push('#' + id + ' .ts-anim-none{animation:none;}');
+  css.push('#' + id + ' .ts-step{animation:tsFadeIn .3s ease;}');
+  css.push('@keyframes tsFadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}');
+  css.push('@media(max-width:400px){#' + id + ' .ts-yesno{flex-direction:column;}}');
+
+  var htmlOut = '<div id="' + id + '"><div class="ts-inner"><div id="' + id + '_stage"></div></div><div id="' + id + '_measure" class="ts-inner" style="visibility:hidden;height:0;overflow:hidden;padding-top:0;padding-bottom:0;"></div></div>';
+
+  var jsLines = [];
+  jsLines.push('(function(){');
+  jsLines.push('  var CFG = ' + JSON.stringify({design:d, results:state.results, questions:state.questions}) + ';');
+  jsLines.push('  var ROOT_ID = "' + id + '";');
+  jsLines.push('  var stage = document.getElementById(ROOT_ID + "_stage");');
+  jsLines.push('  if(!stage) return;');
+  jsLines.push('  var idx = ' + startIndex + ';');
+  jsLines.push('  var answers = {};');
+  jsLines.push('  var lastResultId = "";');
+  jsLines.push('  function esc(s){ return (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }');
+  jsLines.push('  function highlightNum(text){');
+  jsLines.push('    var t = esc(text);');
+  jsLines.push('    return t.replace(/(\\d+)(\\s*\\/)/, \'<span class="ts-result-num ts-anim-' + resultAnim + '">$1</span>$2\');');
+  jsLines.push('  }');
+  jsLines.push('  function findResult(rid){ for(var i=0;i<CFG.results.length;i++){ if(CFG.results[i].id===rid) return CFG.results[i]; } return CFG.results[0]||null; }');
+  jsLines.push('  function total(){ return CFG.questions.length; }');
+  jsLines.push('  function progressPct(){ return Math.round(((idx+1)/total())*100); }');
+  jsLines.push('  function fitNoWrap(){');
+  jsLines.push('    var els = stage.querySelectorAll(".ts-opt-title, .ts-btn, .ts-result-title, .ts-q-title, .ts-eyebrow, .ts-opt-desc, .ts-result-topbadge, .ts-result-urgency");');
+  jsLines.push('    els.forEach(function(el){');
+  jsLines.push('      el.style.fontSize = "";');
+  jsLines.push('      var tries = 0;');
+  jsLines.push('      while(el.scrollWidth > el.clientWidth + 1 && tries < 40){');
+  jsLines.push('        var cur = parseFloat(window.getComputedStyle(el).fontSize);');
+  jsLines.push('        if(!cur || cur <= 10) break;');
+  jsLines.push('        el.style.fontSize = (cur - 0.5) + "px";');
+  jsLines.push('        tries++;');
+  jsLines.push('      }');
+  jsLines.push('    });');
+  jsLines.push('  }');
+  jsLines.push('  var fitResizeTimer = null;');
+  jsLines.push('  window.addEventListener("resize", function(){');
+  jsLines.push('    clearTimeout(fitResizeTimer);');
+  jsLines.push('    fitResizeTimer = setTimeout(function(){ fitNoWrap(); if(CFG.questions[idx] && CFG.questions[idx].type === "result"){ matchResultHeight(); } }, 120);');
+  jsLines.push('  });');
+  jsLines.push('  function stepContentHTML(q, stepIdx){');
+  jsLines.push('    var html = "";');
+  jsLines.push('    if(CFG.design.showQNum && q.type !== "result" && q.title){');
+  jsLines.push('      html += \'<div style="text-align:center;"><span class="ts-eyebrow">\' + (stepIdx+1) + \'단계</span></div>\';');
+  jsLines.push('    }');
+  jsLines.push('    if(q.type === "single" || q.type === "multi"){');
+  jsLines.push('      html += renderChoice(q);');
+  jsLines.push('    } else if(q.type === "yesno"){');
+  jsLines.push('      html += renderYesNo(q);');
+  jsLines.push('    } else if(q.type === "dropdown"){');
+  jsLines.push('      html += renderDropdown(q);');
+  jsLines.push('    } else if(q.type === "text" || q.type === "name" || q.type === "phone"){');
+  jsLines.push('      html += renderTextField(q);');
+  jsLines.push('    } else if(q.type === "agree"){');
+  jsLines.push('      html += renderAgree(q);');
+  jsLines.push('    } else if(q.type === "result"){');
+  jsLines.push('      html += renderResult(q);');
+  jsLines.push('    } else if(q.type === "form"){');
+  jsLines.push('      html += renderForm(q);');
+  jsLines.push('    }');
+  jsLines.push('    return html;');
+  jsLines.push('  }');
+  jsLines.push('  function firstNonResultQuestion(){');
+  jsLines.push('    for(var i=0;i<CFG.questions.length;i++){ if(CFG.questions[i].type !== "result") return {q:CFG.questions[i], i:i}; }');
+  jsLines.push('    return null;');
+  jsLines.push('  }');
+  jsLines.push('  function measureQuestionHeight(){');
+  jsLines.push('    var mEl = document.getElementById(ROOT_ID + "_measure");');
+  jsLines.push('    var ref = firstNonResultQuestion();');
+  jsLines.push('    if(!mEl || !ref) return 0;');
+  jsLines.push('    mEl.innerHTML = \'<div class="ts-step">\' + stepContentHTML(ref.q, ref.i) + "</div>";');
+  jsLines.push('    var h = mEl.scrollHeight;');
+  jsLines.push('    mEl.innerHTML = "";');
+  jsLines.push('    return h;');
+  jsLines.push('  }');
+  jsLines.push('  function matchResultHeight(){');
+  jsLines.push('    var wrap = stage.querySelector(".ts-result");');
+  jsLines.push('    if(!wrap) return;');
+  jsLines.push('    wrap.style.minHeight = "";');
+  jsLines.push('  }');
+  jsLines.push('  function render(){');
+  jsLines.push('    var q = CFG.questions[idx];');
+  jsLines.push('    if(!q){ return; }');
+  jsLines.push('    var html = "";');
+  jsLines.push('    if(CFG.design.showProgress && q.type === "result"){');
+  jsLines.push('      html += \'<div class="ts-progress-label">완료</div>\';');
+  jsLines.push('      html += \'<div class="ts-progress-track"><div class="ts-progress-fill" style="width:100%;"></div></div>\';');
+  jsLines.push('    } else if(CFG.design.showProgress){');
+  jsLines.push('      html += \'<div class="ts-progress-label">\' + (idx+1) + \' / \' + total() + \'</div>\';');
+  jsLines.push('      html += \'<div class="ts-progress-track"><div class="ts-progress-fill" style="width:\' + progressPct() + \'%;"></div></div>\';');
+  jsLines.push('    }');
+  jsLines.push('    html += \'<div class="ts-step">\' + stepContentHTML(q, idx) + "</div>";');
+  jsLines.push('    stage.innerHTML = html;');
+  jsLines.push('    Array.prototype.slice.call(stage.querySelectorAll("script")).forEach(function(old){');
+  jsLines.push('      var s = document.createElement("script");');
+  jsLines.push('      for(var i=0;i<old.attributes.length;i++){ var a = old.attributes[i]; s.setAttribute(a.name, a.value); }');
+  jsLines.push('      s.text = old.textContent;');
+  jsLines.push('      old.parentNode.replaceChild(s, old);');
+  jsLines.push('    });');
+  jsLines.push('    bind(q);');
+  jsLines.push('    fitNoWrap();');
+  jsLines.push('    if(q.type === "result"){ matchResultHeight(); }');
+  jsLines.push('  }');
+  jsLines.push('  function qHeader(q){');
+  jsLines.push('    var h = "";');
+  jsLines.push('    if(q.title) h += \'<h2 class="ts-q-title">\' + esc(q.title).replace(/(\\(필수\\)|\\(선택\\))/g, \'<span style="color:' + d.primary + '">$1</span>\') + \'</h2>\';');
+  jsLines.push('    if(q.description) h += \'<p class="ts-q-desc">\' + esc(q.description) + \'</p>\';');
+  jsLines.push('    return h;');
+  jsLines.push('  }');
+  jsLines.push('  function renderChoice(q){');
+  jsLines.push('    var h = qHeader(q);');
+  jsLines.push('    h += \'<div class="ts-options">\';');
+  jsLines.push('    var sel = answers[q.id] || [];');
+  jsLines.push('    q.options.forEach(function(o){');
+  jsLines.push('      var isSel = sel.indexOf(o.id) !== -1;');
+  jsLines.push('      var hasDesc = CFG.design.showOptionDesc && o.desc;');
+  jsLines.push('      h += \'<div class="ts-option\' + (isSel?" selected":"") + (hasDesc?"":" no-desc") + \'" data-oid="\' + o.id + \'">\';');
+  jsLines.push('      h += \'<div class="\' + (q.type==="multi"?"ts-check":"ts-radio") + \'"></div>\';');
+  jsLines.push('      if(CFG.design.showIcons && o.icon){ h += \'<div class="ts-opt-icon">\' + esc(o.icon) + \'</div>\'; }');
+  jsLines.push('      h += \'<div class="ts-opt-body"><div class="ts-opt-title">\' + esc(o.title) + \'</div>\';');
+  jsLines.push('      if(hasDesc){ h += \'<div class="ts-opt-desc">\' + esc(o.desc) + \'</div>\'; }');
+  jsLines.push('      h += "</div></div>";');
+  jsLines.push('    });');
+  jsLines.push('    h += "</div>";');
+  jsLines.push('    if(q.type === "multi" || !CFG.design.autoAdvance){');
+  jsLines.push('      h += \'<button class="ts-btn" id="tsNextBtn">\' + esc(q.buttonText||"다음") + \'</button>\';');
+  jsLines.push('    }');
+  jsLines.push('    return h;');
+  jsLines.push('  }');
+  jsLines.push('  function renderYesNo(q){');
+  jsLines.push('    var h = qHeader(q);');
+  jsLines.push('    var sel = answers[q.id];');
+  jsLines.push('    h += \'<div class="ts-yesno">\';');
+  jsLines.push('    h += \'<div class="ts-option\' + (sel==="yes"?" selected":"") + \'" data-yn="yes"><div class="ts-opt-title">\' + esc(q.yesLabel||"예") + \'</div></div>\';');
+  jsLines.push('    h += \'<div class="ts-option\' + (sel==="no"?" selected":"") + \'" data-yn="no"><div class="ts-opt-title">\' + esc(q.noLabel||"아니오") + \'</div></div>\';');
+  jsLines.push('    h += "</div>";');
+  jsLines.push('    if(!CFG.design.autoAdvance){ h += \'<button class="ts-btn" id="tsNextBtn">\' + esc(q.buttonText||"다음") + \'</button>\'; }');
+  jsLines.push('    return h;');
+  jsLines.push('  }');
+  jsLines.push('  function renderDropdown(q){');
+  jsLines.push('    var h = qHeader(q);');
+  jsLines.push('    h += \'<select class="ts-input" id="tsDropdown"><option value="">선택해 주세요</option>\';');
+  jsLines.push('    q.options.forEach(function(o){');
+  jsLines.push('      var isSel = answers[q.id] === o.id;');
+  jsLines.push('      h += \'<option value="\' + o.id + \'"\' + (isSel?" selected":"") + \'>\' + esc((o.icon?o.icon+" ":"")+o.title) + \'</option>\';');
+  jsLines.push('    });');
+  jsLines.push('    h += "</select>";');
+  jsLines.push('    h += \'<button class="ts-btn" id="tsNextBtn">\' + esc(q.buttonText||"다음") + \'</button>\';');
+  jsLines.push('    return h;');
+  jsLines.push('  }');
+  jsLines.push('  function renderTextField(q){');
+  jsLines.push('    var h = qHeader(q);');
+  jsLines.push('    var type = q.type === "phone" ? "tel" : "text";');
+  jsLines.push('    var val = answers[q.id] || "";');
+  jsLines.push('    h += \'<input class="ts-input" id="tsTextInput" type="\' + type + \'" value="\' + esc(val) + \'" placeholder="\' + (q.type==="phone"?"010-0000-0000":q.type==="name"?"이름을 입력해 주세요":"내용을 입력해 주세요") + \'">\';');
+  jsLines.push('    h += \'<div class="ts-error" id="tsFieldErr" style="display:none;">내용을 입력해 주세요</div>\';');
+  jsLines.push('    h += \'<button class="ts-btn" id="tsNextBtn">\' + esc(q.buttonText||"다음") + \'</button>\';');
+  jsLines.push('    return h;');
+  jsLines.push('  }');
+  jsLines.push('  function renderAgree(q){');
+  jsLines.push('    var h = qHeader(q);');
+  jsLines.push('    var checked = !!answers[q.id];');
+  jsLines.push('    h += \'<label class="ts-agree"><input type="checkbox" id="tsAgreeChk" \' + (checked?"checked":"") + \'><span>\' + esc(q.agreeText||"") + \'</span></label>\';');
+  jsLines.push('    h += \'<button class="ts-btn" id="tsNextBtn">\' + esc(q.buttonText||"다음") + \'</button>\';');
+  jsLines.push('    return h;');
+  jsLines.push('  }');
+  jsLines.push('  function renderResult(q){');
+  jsLines.push('    var r = findResult(lastResultId);');
+  jsLines.push('    if(!r) return "<p style=\\"text-align:center;color:#6b7280;\\">결과가 설정되지 않았습니다.</p>";');
+  jsLines.push('    var h = \'<div class="ts-result">\';');
+  jsLines.push('    h += \'<div class="ts-result-top">\';');
+  jsLines.push('    if(r.emoji) h += \'<div class="ts-result-emoji">\' + esc(r.emoji) + \'</div>\';');
+  jsLines.push('    if(r.topBadge) h += \'<div class="ts-result-topbadge">\' + esc(r.topBadge) + \'</div>\';');
+  jsLines.push('    h += \'<h2 class="ts-result-title">\' + esc(r.title) + \'</h2>\';');
+  jsLines.push('    if(r.badge) h += \'<p class="ts-result-urgency">\' + highlightNum(r.badge) + \'</p>\';');
+  jsLines.push('    h += "</div>";');
+  jsLines.push('    h += \'<div class="ts-result-spacer"></div>\';');
+  jsLines.push('    h += \'<div class="ts-result-bottom">\';');
+  jsLines.push('    if(r.body) h += \'<p class="ts-result-body">\' + esc(r.body) + \'</p>\';');
+  jsLines.push('    if(r.note) h += \'<p class="ts-result-note">\' + esc(r.note) + \'</p>\';');
+  jsLines.push('    if(q.showNextButton){');
+  jsLines.push('      h += \'<button class="ts-btn" id="tsNextBtn">\' + esc(q.buttonText||"다음") + \'</button>\';');
+  jsLines.push('    } else {');
+  jsLines.push('      h += \'<div class="ts-result-arrows">\' +');
+  jsLines.push('        \'<span class="ts-anim-' + resultAnim + '">\\u25BC</span>\' +');
+  jsLines.push('        \'<span class="ts-anim-' + resultAnim + '">\\u25BC</span>\' +');
+  jsLines.push('        \'<span class="ts-anim-' + resultAnim + '">\\u25BC</span>\' +');
+  jsLines.push('      \'</div>\';');
+  jsLines.push('    }');
+  jsLines.push('    h += "</div>";');
+  jsLines.push('    h += "</div>";');
+  jsLines.push('    return h;');
+  jsLines.push('  }');
+  jsLines.push('  function renderForm(q){');
+  jsLines.push('    var h = qHeader(q);');
+  jsLines.push('    h += \'<div class="ts-form">\';');
+  jsLines.push('    if(q.useCustomCode && q.customCode){');
+  jsLines.push('      h += q.customCode;');
+  jsLines.push('    } else {');
+  jsLines.push('    if(q.fields && q.fields.name){');
+  jsLines.push('      h += \'<label class="ts-field-label">이름</label><input class="ts-input" id="tsFormName" type="text" placeholder="이름">\';');
+  jsLines.push('    }');
+  jsLines.push('    if(q.fields && q.fields.phone){');
+  jsLines.push('      h += \'<label class="ts-field-label">전화번호</label><input class="ts-input" id="tsFormPhone" type="tel" placeholder="연락받으실 번호 (하이픈 없이 입력)">\';');
+  jsLines.push('    }');
+  jsLines.push('    if(q.fields && q.fields.age){');
+  jsLines.push('      h += \'<label class="ts-field-label">나이</label><input class="ts-input" id="tsFormAge" type="text" placeholder="나이">\';');
+  jsLines.push('    }');
+  jsLines.push('    }');
+  jsLines.push('    h += \'<label class="ts-agree"><input type="checkbox" id="tsFormAgree"><span>\' + esc(q.agreeText||"개인정보 취급 방침 전체 동의") + \'</span></label>\';');
+  jsLines.push('    h += \'<div class="ts-error" id="tsFormErr" style="display:none;">필수 항목을 확인해 주세요</div>\';');
+  jsLines.push('    h += \'<button class="ts-btn" id="tsNextBtn">\' + esc(q.buttonText||"상담 신청하기") + \'</button>\';');
+  jsLines.push('    h += "</div>";');
+  jsLines.push('    return h;');
+  jsLines.push('  }');
+  jsLines.push('  function goNext(){ if(idx < total()-1){ idx++; render(); } else { stage.innerHTML = \'<div class="ts-result"><div class="ts-result-emoji">✅</div><h2 class="ts-result-title">신청이 완료되었습니다</h2><p class="ts-result-body">빠른 시일 내에 연락드리겠습니다.</p></div>\'; } }');
+  jsLines.push('  function bind(q){');
+  jsLines.push('    var nextBtn = document.getElementById("tsNextBtn");');
+  jsLines.push('    if(q.type === "single" || q.type === "multi"){');
+  jsLines.push('      var cards = stage.querySelectorAll(".ts-option");');
+  jsLines.push('      cards.forEach(function(c){');
+  jsLines.push('        c.addEventListener("click", function(){');
+  jsLines.push('          var oid = c.getAttribute("data-oid");');
+  jsLines.push('          var opt = null;');
+  jsLines.push('          q.options.forEach(function(o){ if(o.id===oid) opt = o; });');
+  jsLines.push('          if(q.type === "single"){');
+  jsLines.push('            answers[q.id] = [oid];');
+  jsLines.push('            if(opt && opt.resultId) lastResultId = opt.resultId;');
+  jsLines.push('            if(CFG.design.autoAdvance){ goNext(); return; }');
+  jsLines.push('            cards.forEach(function(cc){ cc.classList.toggle("selected", cc===c); });');
+  jsLines.push('          } else {');
+  jsLines.push('            var arr = answers[q.id] || [];');
+  jsLines.push('            var i = arr.indexOf(oid);');
+  jsLines.push('            if(i===-1){ arr.push(oid); if(opt && opt.resultId) lastResultId = opt.resultId; } else { arr.splice(i,1); }');
+  jsLines.push('            answers[q.id] = arr;');
+  jsLines.push('            c.classList.toggle("selected", i===-1);');
+  jsLines.push('          }');
+  jsLines.push('        });');
+  jsLines.push('      });');
+  jsLines.push('    }');
+  jsLines.push('    if(q.type === "yesno"){');
+  jsLines.push('      var ynCards = stage.querySelectorAll("[data-yn]");');
+  jsLines.push('      ynCards.forEach(function(c){');
+  jsLines.push('        c.addEventListener("click", function(){');
+  jsLines.push('          var yn = c.getAttribute("data-yn");');
+  jsLines.push('          answers[q.id] = yn;');
+  jsLines.push('          lastResultId = yn === "yes" ? (q.yesResultId||lastResultId) : (q.noResultId||lastResultId);');
+  jsLines.push('          if(CFG.design.autoAdvance){ goNext(); return; }');
+  jsLines.push('          ynCards.forEach(function(cc){ cc.classList.toggle("selected", cc===c); });');
+  jsLines.push('        });');
+  jsLines.push('      });');
+  jsLines.push('    }');
+  jsLines.push('    if(q.type === "dropdown"){');
+  jsLines.push('      var dd = document.getElementById("tsDropdown");');
+  jsLines.push('      if(dd) dd.addEventListener("change", function(){');
+  jsLines.push('        answers[q.id] = dd.value;');
+  jsLines.push('        var opt=null; q.options.forEach(function(o){ if(o.id===dd.value) opt=o; });');
+  jsLines.push('        if(opt && opt.resultId) lastResultId = opt.resultId;');
+  jsLines.push('      });');
+  jsLines.push('    }');
+  jsLines.push('    if(nextBtn){');
+  jsLines.push('      nextBtn.addEventListener("click", function(){');
+  jsLines.push('        if(q.type === "text" || q.type === "name" || q.type === "phone"){');
+  jsLines.push('          var inp = document.getElementById("tsTextInput");');
+  jsLines.push('          if(!inp.value.trim()){ document.getElementById("tsFieldErr").style.display="block"; return; }');
+  jsLines.push('          answers[q.id] = inp.value;');
+  jsLines.push('        }');
+  jsLines.push('        if(q.type === "agree"){');
+  jsLines.push('          var chk = document.getElementById("tsAgreeChk");');
+  jsLines.push('          if(!chk.checked){ return; }');
+  jsLines.push('          answers[q.id] = true;');
+  jsLines.push('        }');
+  jsLines.push('        if(q.type === "form"){');
+  jsLines.push('          var okName = q.useCustomCode || !q.fields.name || (document.getElementById("tsFormName") && document.getElementById("tsFormName").value.trim());');
+  jsLines.push('          var okPhone = q.useCustomCode || !q.fields.phone || (document.getElementById("tsFormPhone") && document.getElementById("tsFormPhone").value.trim());');
+  jsLines.push('          var agreeEl = document.getElementById("tsFormAgree");');
+  jsLines.push('          if(!okName || !okPhone || !(agreeEl && agreeEl.checked)){');
+  jsLines.push('            document.getElementById("tsFormErr").style.display = "block";');
+  jsLines.push('            return;');
+  jsLines.push('          }');
+  jsLines.push('        }');
+  jsLines.push('        goNext();');
+  jsLines.push('      });');
+  jsLines.push('    }');
+  jsLines.push('  }');
+  jsLines.push('  render();');
+  jsLines.push('})();');
+
+  var cssBlock = '<style>' + css.join('\n') + '</style>';
+  var jsBlock = '<script>' + jsLines.join('\n') + '<' + '/script>';
+  var snippet = cssBlock + '\n' + htmlOut + '\n' + jsBlock;
+
+  if(forPreview){
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+      '<style>body{margin:0;background:' + veryLightBg + ';}</style></head><body>' + snippet + '</body></html>';
+  }
+  return snippet;
+}
+
+/* =========================================================
+   미리보기 갱신
+   ========================================================= */
+function findResultPageIndex(){
+  var idx = -1;
+  STATE.questions.forEach(function(q, i){ if(idx === -1 && q.type === 'result'){ idx = i; } });
+  if(idx === -1){ idx = STATE.questions.length - 1; }
+  return idx;
+}
+
+/* iframe 안 콘텐츠의 실제 세로 높이를 측정해서 그 높이만큼 프레임을 늘려줍니다.
+   결과 화면은 이미 위젯 내부 로직으로 질문 화면과 콘텐츠 높이가 같아지도록 맞춰져 있으므로,
+   여기서 두 프레임을 각각 자기 콘텐츠에 맞게 자동 조절하면 1페이지/2페이지 높이가 서로 같아집니다. */
+function autosizeIframe(iframe){
+  if(!iframe) return;
+  try{
+    var doc = iframe.contentWindow && iframe.contentWindow.document;
+    if(!doc) return;
+    var h = Math.ceil(doc.documentElement.scrollHeight || doc.body.scrollHeight || 0);
+    if(h > 0){
+      iframe.style.height = h + 'px';
+    }
+  }catch(e){}
+}
+
+function updatePreview(){
+  var frame = document.getElementById('previewFrame');
+  frame.onload = function(){ autosizeIframe(frame); };
+  frame.srcdoc = buildWidgetDocument(STATE, true, 0);
+  var frame2 = document.getElementById('previewFrame2');
+  if(frame2){
+    frame2.onload = function(){ autosizeIframe(frame2); };
+    frame2.srcdoc = buildWidgetDocument(STATE, true, findResultPageIndex());
+  }
+}
+
+document.getElementById('btnPreviewFirst').addEventListener('click', updatePreview);
+
+/* device width toggle */
+document.querySelectorAll('.device-toolbar [data-w]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.getElementById('deviceFrame').style.width = btn.getAttribute('data-w') + 'px';
+    var deviceFrame2 = document.getElementById('deviceFrame2');
+    if(deviceFrame2){ deviceFrame2.style.width = btn.getAttribute('data-w') + 'px'; }
+    document.querySelectorAll('.device-toolbar [data-w]').forEach(function(b){ b.classList.remove('primary'); });
+    btn.classList.add('primary');
+    /* 폭이 바뀌면 글자 크기(clamp)도 바뀌어 높이가 달라지므로 다시 측정 */
+    setTimeout(function(){
+      autosizeIframe(document.getElementById('previewFrame'));
+      autosizeIframe(document.getElementById('previewFrame2'));
+    }, 220);
+  });
+});
+
+/* 디자인 값이 바뀔 때(afterChange → schedulePreview → updatePreview)마다
+   iframe이 다시 로드되므로 onload에서 자동으로 재측정됩니다. */
+
+/* =========================================================
+   탭 전환
+   ========================================================= */
+document.querySelectorAll('.tab-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.getAttribute('data-tab')).classList.add('active');
+  });
+});
+
+/* =========================================================
+   상단 버튼들
+   ========================================================= */
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 1800);
+}
+
+document.getElementById('btnReset').addEventListener('click', function(){
+  if(!confirm('모든 설정을 초기 샘플로 되돌릴까요? 되돌릴 수 없습니다.')) return;
+  STATE = defaultState();
+  currentQId = STATE.questions[0].id;
+  saveToStorage();
+  renderAll();
+  schedulePreview();
+  showToast('초기 상태로 되돌렸습니다');
+});
+
+document.getElementById('btnLoadTemplate').addEventListener('click', function(){
+  var sel = document.getElementById('templateSelect').value;
+  if(!confirm('선택한 템플릿을 적용할까요? 현재 작업 중인 내용은 사라집니다.')) return;
+  STATE = (sel === 'youth-mv') ? presetYouthMV() : presetSmileLasik();
+  ensureDefaultResult();
+  STATE.results.forEach(function(r){ if(typeof r.topBadge === 'undefined'){ r.topBadge = '우선 선정 대상'; } if(typeof r.note === 'undefined'){ r.note = ''; } });
+  migrateDesignDefaults();
+  normalizeResultQuestions(STATE);
+  currentQId = STATE.questions[0].id;
+  saveToStorage();
+  renderAll();
+  schedulePreview();
+  showToast('템플릿을 적용했습니다');
+});
+
+document.getElementById('btnSave').addEventListener('click', function(){
+  var blob = new Blob([JSON.stringify(STATE, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'survey-config.json';
+  a.click();
+  showToast('설정 파일을 저장했습니다');
+});
+
+document.getElementById('btnLoad').addEventListener('click', function(){
+  document.getElementById('fileLoad').click();
+});
+document.getElementById('fileLoad').addEventListener('change', function(e){
+  var file = e.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      var loaded = JSON.parse(ev.target.result);
+      if(!loaded.questions || !loaded.design){ throw new Error('invalid'); }
+      STATE = loaded;
+      normalizeResultQuestions(STATE);
+      migrateDesignDefaults();
+      currentQId = STATE.questions.length ? STATE.questions[0].id : null;
+      saveToStorage();
+      renderAll();
+      schedulePreview();
+      showToast('설정을 불러왔습니다');
+    }catch(err){
+      alert('올바른 설정 파일이 아닙니다.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+/* 코드 복사하기: 별도 생성 모달 없이, 클릭한 순간의 최신 설정(STATE)으로
+   바로 코드를 만들어 클립보드에 복사합니다. 미리보기와 항상 동일한 코드입니다. */
+function copyTextToClipboard(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){ showToast('코드를 복사했습니다'); }, function(){ fallbackCopy(text); });
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text){
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try{ document.execCommand('copy'); showToast('코드를 복사했습니다'); }catch(e){ alert('복사에 실패했습니다. 직접 선택해 복사해 주세요.'); }
+  document.body.removeChild(ta);
+}
+
+document.getElementById('btnCopyCode').addEventListener('click', function(){
+  var code = buildWidgetDocument(STATE, false);
+  copyTextToClipboard(code);
+});
+
+document.getElementById('btnDownloadCode').addEventListener('click', function(){
+  var code = buildWidgetDocument(STATE, false);
+  var full = '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>설문</title></head><body>' + code + '</body></html>';
+  var blob = new Blob([full], {type:'text/html'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'survey-widget.html';
+  a.click();
+  showToast('HTML 파일로 저장했습니다');
+});
+
+init();
+</script>
+</body>
+</html>

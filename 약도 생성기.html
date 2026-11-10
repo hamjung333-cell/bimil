@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>위치도(약도) 생성기</title>
+<style>
+  :root{
+    --bg:#F5F4EF;
+    --panel:#FFFFFF;
+    --ink:#20242C;
+    --sub:#6B7280;
+    --line:#E3E1D8;
+    --accent:#D64545;
+    --accent2:#2F6F6B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Apple SD Gothic Neo","Malgun Gothic",-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+  }
+  .wrap{
+    max-width:1200px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+  }
+  header{
+    margin-bottom:20px;
+  }
+  header h1{
+    font-size:22px;
+    margin:0 0 6px;
+    letter-spacing:-0.02em;
+  }
+  header p{
+    margin:0;
+    color:var(--sub);
+    font-size:14px;
+    line-height:1.6;
+  }
+  .layout{
+    display:flex;
+    gap:20px;
+    align-items:flex-start;
+  }
+  @media (max-width:860px){
+    .layout{flex-direction:column;}
+    .stage{order:1;}
+    .side{order:2;}
+  }
+  .stage{
+    flex:1;
+    min-width:0;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:18px;
+    order:2;
+  }
+  .dropzone{
+    border:2px dashed #C9C6B8;
+    border-radius:10px;
+    padding:50px 20px;
+    text-align:center;
+    color:var(--sub);
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color:var(--accent);
+    background:#FBF3F1;
+  }
+  .dropzone strong{color:var(--ink);}
+  canvas{
+    display:block;
+    max-width:100%;
+    height:auto;
+    border-radius:6px;
+    cursor:crosshair;
+    touch-action:none;
+  }
+  .canvas-hint{
+    font-size:12.5px;
+    color:var(--sub);
+    margin-top:10px;
+    line-height:1.5;
+  }
+  .side{
+    width:300px;
+    flex-shrink:0;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    order:1;
+  }
+  @media (max-width:860px){
+    .side{width:100%;}
+  }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px;
+  }
+  .card h2{
+    font-size:13px;
+    margin:0 0 12px;
+    color:var(--sub);
+    font-weight:600;
+    letter-spacing:.02em;
+  }
+  label.field{
+    display:block;
+    font-size:12.5px;
+    color:var(--sub);
+    margin-bottom:5px;
+  }
+  input[type=text]{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:13.5px;
+    font-family:inherit;
+    margin-bottom:12px;
+    background:#FCFBF8;
+  }
+  input[type=text]:focus{
+    outline:none;
+    border-color:var(--accent2);
+  }
+  .row{display:flex; gap:8px; align-items:center;}
+  .marker-item{
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px;
+    margin-bottom:8px;
+  }
+  .marker-item .row{margin-bottom:8px;}
+  .marker-item input[type=text]{margin-bottom:0;}
+  input[type=color]{
+    width:32px;height:32px;
+    border:none;border-radius:6px;
+    padding:0;cursor:pointer;
+    background:none;
+  }
+  .btn{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:7px;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .btn-primary{background:var(--ink); color:#fff;}
+  .btn-primary:hover{background:#3a4051;}
+  .btn-ghost{background:#F0EEE6; color:var(--ink);}
+  .btn-ghost:hover{background:#E7E4D8;}
+  .btn-del{
+    background:none;border:none;color:#B94A3D;
+    cursor:pointer; font-size:12px; padding:4px 6px;
+    flex-shrink:0;
+  }
+  .empty-markers{
+    font-size:12.5px;
+    color:var(--sub);
+    padding:8px 2px;
+  }
+  .download-btn{
+    background:var(--accent);
+    color:#fff;
+  }
+  .download-btn:hover{background:#BE3A3A;}
+  .actions{display:flex; flex-direction:column; gap:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>위치도(약도) 생성기</h1>
+    <p>네이버 지도를 캡처한 이미지를 올린 뒤 위치를 클릭하면 마커가 표시됩니다. 마커에 지하철·편의점 같은 아이콘을 지정하고, 설명 텍스트도 여러 개 자유롭게 추가할 수 있어요.</p>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <div id="dropzone" class="dropzone">
+        <div><strong>클릭하거나 이미지를 끌어다 놓으세요</strong></div>
+        <div style="margin-top:6px;">네이버 지도 캡처 이미지 (PNG, JPG)</div>
+        <input id="fileInput" type="file" accept="image/*" style="display:none;">
+      </div>
+      <canvas id="canvas" style="display:none;"></canvas>
+      <div id="hint" class="canvas-hint" style="display:none;">
+        지도를 클릭하면 마커가 추가됩니다. 마커·제목·주소·추가 텍스트는 모두 드래그로 위치를 옮길 수 있어요.
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h2>제목 / 주소 (선택)</h2>
+        <label class="field">약도 제목</label>
+        <input id="titleInput" type="text" placeholder="예: OO센터 오시는 길">
+        <div class="row" style="margin-bottom:12px;">
+          <input type="range" id="titleSize" min="0.5" max="3" step="0.1" value="1" style="flex:1;">
+          <span id="titleSizeLabel" style="font-size:12px; color:var(--sub); width:32px; text-align:right;">1.0x</span>
+        </div>
+        <label class="field">주소 / 안내 문구</label>
+        <input id="addressInput" type="text" placeholder="예: 서울시 강남구 ...">
+        <div class="row">
+          <input type="range" id="addressSize" min="0.5" max="3" step="0.1" value="1" style="flex:1;">
+          <span id="addressSizeLabel" style="font-size:12px; color:var(--sub); width:32px; text-align:right;">1.0x</span>
+        </div>
+        <div style="font-size:12px; color:var(--sub); margin-top:10px; margin-bottom:10px; line-height:1.5;">
+          지도 위 텍스트를 클릭하고 드래그하면 원하는 위치로 옮길 수 있어요.
+        </div>
+        <button class="btn btn-ghost" id="groupBtn">제목+주소 그룹으로 묶기</button>
+      </div>
+
+      <div class="card">
+        <h2>새 마커 기본 크기</h2>
+        <div class="row">
+          <input type="range" id="defaultSize" min="0.5" max="2.5" step="0.1" value="1" style="flex:1;">
+          <span id="defaultSizeLabel" style="font-size:12.5px; color:var(--sub); width:32px; text-align:right;">1.0x</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>추가 텍스트</h2>
+        <div id="textList"></div>
+        <div id="emptyTexts" class="empty-markers">필요한 설명 문구를 자유롭게 추가하세요. (예: 3층 입구, 주차 안내)</div>
+        <button class="btn btn-ghost" id="addTextBtn" style="margin-top:8px;">+ 텍스트 추가</button>
+      </div>
+
+      <div class="card">
+        <h2>마커 목록</h2>
+        <div id="markerList"></div>
+        <div id="emptyMarkers" class="empty-markers">아직 마커가 없어요. 지도를 클릭해 추가하세요.</div>
+      </div>
+
+      <div class="card actions">
+        <label class="field">저장 파일 이름</label>
+        <input id="filenameInput" type="text" placeholder="예: 위치도" style="margin-bottom:12px;">
+        <button class="btn btn-ghost" id="resetBtn">이미지 다시 올리기</button>
+        <button class="btn download-btn" id="downloadBtn">약도 이미지 다운로드</button>
+      </div>
+
+      <div class="card" id="previewCard" style="display:none;">
+        <h2>완성된 약도</h2>
+        <img id="previewImg" style="width:100%; border-radius:6px; border:1px solid var(--line); display:block; margin-bottom:10px;">
+        <div style="font-size:12px; color:var(--sub); line-height:1.6; margin-bottom:10px;">
+          자동 다운로드가 안 되면, 위 이미지를<br>
+          <strong>PC:</strong> 마우스 오른쪽 클릭 → "이미지를 다른 이름으로 저장"<br>
+          <strong>모바일:</strong> 길게 눌러 "이미지 저장"
+        </div>
+        <a id="previewOpenLink" class="btn btn-primary" style="display:block; text-align:center; text-decoration:none;" target="_blank">새 탭에서 원본 크기로 열기</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const hint = document.getElementById('hint');
+const markerListEl = document.getElementById('markerList');
+const emptyMarkers = document.getElementById('emptyMarkers');
+const titleInput = document.getElementById('titleInput');
+const addressInput = document.getElementById('addressInput');
+
+let img = null;
+let markers = []; // {x,y,label,color}
+let dragTarget = null; // {type:'marker'|'title'|'address', index?, dx, dy}
+let downPos = null;
+let markerCounter = 0;
+
+let titleObj = { text:'', x:16, y:14, sizeScale:1, _w:0, _h:0 };
+let addressObj = { text:'', x:16, y:54, sizeScale:1, _w:0, _h:0 };
+let texts = []; // {text,x,y,sizeScale,color,_w,_h}
+let textCounter = 0;
+
+const ICONS = {
+  none:      { glyph:'',  label:'없음(점)' },
+  subway:    { glyph:'🚇', label:'지하철' },
+  bus:       { glyph:'🚌', label:'버스정류장' },
+  cvs:       { glyph:'🏪', label:'편의점' },
+  parking:   { glyph:'🅿️', label:'주차장' },
+  cafe:      { glyph:'☕', label:'카페' },
+  restaurant:{ glyph:'🍴', label:'음식점' },
+  hospital:  { glyph:'🏥', label:'병원' },
+  bank:      { glyph:'🏦', label:'은행' },
+  toilet:    { glyph:'🚻', label:'화장실' },
+  star:      { glyph:'★',  label:'중요 지점' }
+};
+
+const DEFAULT_COLORS = ['#D64545','#2F6F6B','#3A6FD6','#B7862A'];
+
+function pickColor(){
+  return DEFAULT_COLORS[markerCounter % DEFAULT_COLORS.length];
+}
+
+const defaultSizeInput = document.getElementById('defaultSize');
+const defaultSizeLabel = document.getElementById('defaultSizeLabel');
+let defaultSize = 1;
+defaultSizeInput.addEventListener('input', e => {
+  defaultSize = parseFloat(e.target.value);
+  defaultSizeLabel.textContent = defaultSize.toFixed(1) + 'x';
+});
+
+const titleSizeInput = document.getElementById('titleSize');
+const titleSizeLabel = document.getElementById('titleSizeLabel');
+const addressSizeInput = document.getElementById('addressSize');
+const addressSizeLabel = document.getElementById('addressSizeLabel');
+
+titleInput.addEventListener('input', e => { titleObj.text = e.target.value; redraw(); });
+addressInput.addEventListener('input', e => { addressObj.text = e.target.value; redraw(); });
+titleSizeInput.addEventListener('input', e => {
+  titleObj.sizeScale = parseFloat(e.target.value);
+  titleSizeLabel.textContent = titleObj.sizeScale.toFixed(1) + 'x';
+  redraw();
+});
+addressSizeInput.addEventListener('input', e => {
+  addressObj.sizeScale = parseFloat(e.target.value);
+  addressSizeLabel.textContent = addressObj.sizeScale.toFixed(1) + 'x';
+  redraw();
+});
+
+let titleAddressGrouped = false;
+const groupBtn = document.getElementById('groupBtn');
+groupBtn.addEventListener('click', () => {
+  titleAddressGrouped = !titleAddressGrouped;
+  groupBtn.textContent = titleAddressGrouped ? '그룹 해제하기' : '제목+주소 그룹으로 묶기';
+  groupBtn.classList.toggle('btn-primary', titleAddressGrouped);
+  groupBtn.classList.toggle('btn-ghost', !titleAddressGrouped);
+});
+
+// ---------- Upload handling ----------
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files && e.target.files[0]) loadFile(e.target.files[0]);
+});
+
+function loadFile(file){
+  if(!file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const image = new Image();
+    image.onload = () => setupCanvas(image);
+    image.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function setupCanvas(image){
+  img = image;
+  const maxW = 1000;
+  const scale = Math.min(1, maxW / image.width);
+  canvas.width = Math.round(image.width * scale);
+  canvas.height = Math.round(image.height * scale);
+  markers = [];
+  markerCounter = 0;
+  texts = [];
+  textCounter = 0;
+  titleObj.x = 16; titleObj.y = 14;
+  addressObj.x = 16; addressObj.y = 14 + Math.round(22*titleObj.sizeScale*1.6) + 6;
+  dropzone.style.display = 'none';
+  canvas.style.display = 'block';
+  hint.style.display = 'block';
+  redraw();
+  renderMarkerList();
+  renderTextList();
+}
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  img = null;
+  markers = [];
+  texts = [];
+  canvas.style.display = 'none';
+  hint.style.display = 'none';
+  dropzone.style.display = 'block';
+  fileInput.value = '';
+  renderMarkerList();
+  renderTextList();
+});
+
+// ---------- Drawing ----------
+function redraw(){
+  if(!img) return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  markers.forEach(m => {
+    drawPin(ctx, m.x, m.y, m.color, m.size, m.icon);
+    drawLabel(ctx, m.x, m.y, m.label, m.color, m.size, m.labelPos);
+  });
+  drawTextBox(ctx, titleObj, { baseSize: 22, weight: 'bold', color: '#20242C' });
+  drawTextBox(ctx, addressObj, { baseSize: 14, weight: 'normal', color: '#4B5261' });
+  texts.forEach(t => {
+    drawTextBox(ctx, t, { baseSize: 16, weight: '600', color: t.color });
+  });
+}
+
+function drawTextBox(c, obj, opts){
+  if(!obj.text){ obj._w = 0; obj._h = 0; return; }
+  const fontSize = Math.round(opts.baseSize * obj.sizeScale);
+  c.font = `${opts.weight} ${fontSize}px "Apple SD Gothic Neo", sans-serif`;
+  const padX = 10, padY = 6;
+  const textW = c.measureText(obj.text).width;
+  const w = textW + padX*2;
+  const h = fontSize + padY*2;
+  obj._w = w;
+  obj._h = h;
+
+  roundRect(c, obj.x, obj.y, w, h, 6);
+  c.fillStyle = 'rgba(255,255,255,0.9)';
+  c.fill();
+  c.lineWidth = 1;
+  c.strokeStyle = 'rgba(0,0,0,0.08)';
+  c.stroke();
+
+  c.fillStyle = opts.color;
+  c.textBaseline = 'middle';
+  c.textAlign = 'left';
+  c.fillText(obj.text, obj.x + padX, obj.y + h/2 + 1);
+  c.textAlign = 'left';
+}
+
+function roundRect(c, x, y, w, h, r){
+  c.beginPath();
+  c.moveTo(x+r, y);
+  c.arcTo(x+w, y, x+w, y+h, r);
+  c.arcTo(x+w, y+h, x, y+h, r);
+  c.arcTo(x, y+h, x, y, r);
+  c.arcTo(x, y, x+w, y, r);
+  c.closePath();
+}
+
+function drawPin(c, x, y, color, size, icon){
+  size = size || 1;
+  const r = 11 * size;
+  const pinH = 32 * size;
+  c.save();
+  c.beginPath();
+  c.moveTo(x, y);
+  c.quadraticCurveTo(x - r, y - pinH*0.6, x - r, y - pinH + r);
+  c.arc(x, y - pinH + r, r, Math.PI, 0, false);
+  c.quadraticCurveTo(x + r, y - pinH*0.6, x, y);
+  c.closePath();
+  c.fillStyle = color;
+  c.fill();
+  c.lineWidth = 2 * size;
+  c.strokeStyle = '#ffffff';
+  c.stroke();
+
+  const glyph = icon && ICONS[icon] ? ICONS[icon].glyph : '';
+  if(glyph){
+    c.font = `${Math.round(r*1.3)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(glyph, x, y - pinH + r + 1);
+    c.textAlign = 'left';
+  } else {
+    c.beginPath();
+    c.arc(x, y - pinH + r, r*0.4, 0, Math.PI*2);
+    c.fillStyle = '#ffffff';
+    c.fill();
+  }
+  c.restore();
+}
+
+function drawLabel(c, x, y, text, color, size, pos){
+  if(!text) return;
+  size = size || 1;
+  pos = pos || 'top';
+  const pinH = 32 * size, r = 11 * size;
+  const cx = x, cy = y - pinH + r;
+  const gap = 6 * size;
+  c.font = `bold ${Math.round(14 * size)}px "Apple SD Gothic Neo", sans-serif`;
+  const padX = 10 * size, boxH = 28 * size;
+  const textW = c.measureText(text).width;
+  const boxW = textW + padX*2;
+
+  let boxX, boxY, tail;
+
+  if(pos === 'bottom'){
+    boxX = x - boxW/2;
+    boxY = y + gap;
+    tail = [
+      { x: x - 6*size, y: boxY },
+      { x: x + 6*size, y: boxY },
+      { x: x, y: boxY - 7*size }
+    ];
+  } else if(pos === 'left'){
+    boxX = cx - r - gap - boxW;
+    boxY = cy - boxH/2;
+    tail = [
+      { x: boxX + boxW, y: cy - 6*size },
+      { x: boxX + boxW, y: cy + 6*size },
+      { x: boxX + boxW + 7*size, y: cy }
+    ];
+  } else if(pos === 'right'){
+    boxX = cx + r + gap;
+    boxY = cy - boxH/2;
+    tail = [
+      { x: boxX, y: cy - 6*size },
+      { x: boxX, y: cy + 6*size },
+      { x: boxX - 7*size, y: cy }
+    ];
+  } else {
+    boxX = x - boxW/2;
+    const tipY = y - pinH - r - gap;
+    boxY = tipY - boxH;
+    tail = [
+      { x: x - 6*size, y: boxY + boxH },
+      { x: x + 6*size, y: boxY + boxH },
+      { x: x, y: boxY + boxH + 7*size }
+    ];
+  }
+
+  boxX = Math.min(Math.max(boxX, 4), canvas.width - boxW - 4);
+
+  roundRect(c, boxX, boxY, boxW, boxH, 6 * size);
+  c.fillStyle = color;
+  c.fill();
+
+  c.beginPath();
+  c.moveTo(tail[0].x, tail[0].y);
+  c.lineTo(tail[1].x, tail[1].y);
+  c.lineTo(tail[2].x, tail[2].y);
+  c.closePath();
+  c.fillStyle = color;
+  c.fill();
+
+  c.fillStyle = '#ffffff';
+  c.textBaseline = 'middle';
+  c.textAlign = 'center';
+  c.fillText(text, boxX + boxW/2, boxY + boxH/2 + 1);
+  c.textAlign = 'left';
+}
+
+// ---------- Coordinate helpers ----------
+function getCoords(e){
+  const rect = canvas.getBoundingClientRect();
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY);
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
+}
+
+function findMarkerNear(x, y){
+  for(let i = markers.length - 1; i >= 0; i--){
+    const m = markers[i];
+    const size = m.size || 1;
+    const r = 11 * size;
+    const pinH = 32 * size;
+    const pad = 6;
+    if(x >= m.x - r - pad && x <= m.x + r + pad &&
+       y >= m.y - pinH - r - pad && y <= m.y + pad){
+      return i;
+    }
+  }
+  return -1;
+}
+
+function hitTestBox(obj, x, y){
+  if(!obj.text) return false;
+  return x >= obj.x && x <= obj.x + obj._w && y >= obj.y && y <= obj.y + obj._h;
+}
+
+function clamp(v, min, max){
+  return Math.min(Math.max(v, min), Math.max(min, max));
+}
+
+function findTextHit(x, y){
+  for(let i = texts.length - 1; i >= 0; i--){
+    if(hitTestBox(texts[i], x, y)) return { type:'text', index:i };
+  }
+  if(hitTestBox(addressObj, x, y)) return { type:'address' };
+  if(hitTestBox(titleObj, x, y)) return { type:'title' };
+  return null;
+}
+
+// ---------- Interaction ----------
+function onDown(e){
+  if(!img) return;
+  const {x,y} = getCoords(e);
+  downPos = {x,y};
+
+  const hit = findTextHit(x, y);
+  if(hit){
+    if(hit.type === 'text'){
+      const t = texts[hit.index];
+      dragTarget = { type:'text', index: hit.index, dx: x - t.x, dy: y - t.y };
+    } else if(hit.type === 'address'){
+      dragTarget = { type:'address', dx: x - addressObj.x, dy: y - addressObj.y };
+    } else {
+      dragTarget = { type:'title', dx: x - titleObj.x, dy: y - titleObj.y };
+    }
+    return;
+  }
+  const idx = findMarkerNear(x, y);
+  dragTarget = idx >= 0 ? { type:'marker', index: idx } : null;
+}
+function onMove(e){
+  if(!dragTarget || !img) return;
+  e.preventDefault();
+  const {x,y} = getCoords(e);
+  if(dragTarget.type === 'marker'){
+    markers[dragTarget.index].x = x;
+    markers[dragTarget.index].y = y;
+  } else if(dragTarget.type === 'title'){
+    const newX = clamp(x - dragTarget.dx, 0, canvas.width - titleObj._w);
+    const newY = clamp(y - dragTarget.dy, 0, canvas.height - titleObj._h);
+    const deltaX = newX - titleObj.x;
+    const deltaY = newY - titleObj.y;
+    titleObj.x = newX;
+    titleObj.y = newY;
+    if(titleAddressGrouped){
+      addressObj.x = clamp(addressObj.x + deltaX, 0, canvas.width - addressObj._w);
+      addressObj.y = clamp(addressObj.y + deltaY, 0, canvas.height - addressObj._h);
+    }
+  } else if(dragTarget.type === 'address'){
+    const newX = clamp(x - dragTarget.dx, 0, canvas.width - addressObj._w);
+    const newY = clamp(y - dragTarget.dy, 0, canvas.height - addressObj._h);
+    const deltaX = newX - addressObj.x;
+    const deltaY = newY - addressObj.y;
+    addressObj.x = newX;
+    addressObj.y = newY;
+    if(titleAddressGrouped){
+      titleObj.x = clamp(titleObj.x + deltaX, 0, canvas.width - titleObj._w);
+      titleObj.y = clamp(titleObj.y + deltaY, 0, canvas.height - titleObj._h);
+    }
+  } else if(dragTarget.type === 'text'){
+    const t = texts[dragTarget.index];
+    t.x = clamp(x - dragTarget.dx, 0, canvas.width - t._w);
+    t.y = clamp(y - dragTarget.dy, 0, canvas.height - t._h);
+  }
+  redraw();
+}
+function onUp(e){
+  if(!img){ downPos = null; dragTarget = null; return; }
+  if(dragTarget){
+    dragTarget = null;
+    downPos = null;
+    return;
+  }
+  if(downPos){
+    const evt = e.changedTouches ? e.changedTouches[0] : e;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (evt.clientX - rect.left) * scaleX;
+    const y = (evt.clientY - rect.top) * scaleY;
+    const dist = Math.hypot(x - downPos.x, y - downPos.y);
+    if(dist < 5) addMarker(downPos.x, downPos.y);
+  }
+  downPos = null;
+}
+
+canvas.addEventListener('mousedown', onDown);
+canvas.addEventListener('mousemove', onMove);
+window.addEventListener('mouseup', onUp);
+canvas.addEventListener('touchstart', onDown, {passive:true});
+canvas.addEventListener('touchmove', onMove, {passive:false});
+window.addEventListener('touchend', onUp);
+
+function addMarker(x, y){
+  markerCounter++;
+  const label = markerCounter === 1 ? '우리 시설' : `위치 ${markerCounter}`;
+  markers.push({ x, y, label, color: pickColor(), size: defaultSize, icon: 'none', labelPos: 'top' });
+  redraw();
+  renderMarkerList();
+}
+
+function removeMarker(idx){
+  markers.splice(idx,1);
+  redraw();
+  renderMarkerList();
+}
+
+function renderMarkerList(){
+  markerListEl.innerHTML = '';
+  emptyMarkers.style.display = markers.length ? 'none' : 'block';
+  markers.forEach((m, idx) => {
+    const item = document.createElement('div');
+    item.className = 'marker-item';
+
+    const row1 = document.createElement('div');
+    row1.className = 'row';
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = m.color;
+    colorInput.addEventListener('input', e => { m.color = e.target.value; redraw(); });
+
+    const textInput = document.createElement('input');
+    textInput.type = 'text';
+    textInput.value = m.label;
+    textInput.placeholder = '라벨 텍스트';
+    textInput.addEventListener('input', e => { m.label = e.target.value; redraw(); });
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-del';
+    delBtn.textContent = '삭제';
+    delBtn.addEventListener('click', () => removeMarker(idx));
+
+    row1.appendChild(colorInput);
+    row1.appendChild(textInput);
+    row1.appendChild(delBtn);
+    item.appendChild(row1);
+
+    const row1b = document.createElement('div');
+    row1b.className = 'row';
+    row1b.style.marginBottom = '8px';
+    const iconLabel = document.createElement('span');
+    iconLabel.textContent = '아이콘';
+    iconLabel.style.fontSize = '12px';
+    iconLabel.style.color = 'var(--sub)';
+    iconLabel.style.width = '28px';
+    iconLabel.style.flexShrink = '0';
+
+    const iconSelect = document.createElement('select');
+    iconSelect.style.flex = '1';
+    iconSelect.style.padding = '6px 8px';
+    iconSelect.style.border = '1px solid var(--line)';
+    iconSelect.style.borderRadius = '6px';
+    iconSelect.style.fontSize = '13px';
+    iconSelect.style.fontFamily = 'inherit';
+    iconSelect.style.background = '#FCFBF8';
+    Object.keys(ICONS).forEach(key => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = (ICONS[key].glyph ? ICONS[key].glyph + ' ' : '') + ICONS[key].label;
+      if((m.icon || 'none') === key) opt.selected = true;
+      iconSelect.appendChild(opt);
+    });
+    iconSelect.addEventListener('change', e => { m.icon = e.target.value; redraw(); });
+
+    row1b.appendChild(iconLabel);
+    row1b.appendChild(iconSelect);
+    item.appendChild(row1b);
+
+    const row1c = document.createElement('div');
+    row1c.className = 'row';
+    row1c.style.marginBottom = '8px';
+    const posLabel = document.createElement('span');
+    posLabel.textContent = '말풍선';
+    posLabel.style.fontSize = '12px';
+    posLabel.style.color = 'var(--sub)';
+    posLabel.style.width = '28px';
+    posLabel.style.flexShrink = '0';
+
+    const posSelect = document.createElement('select');
+    posSelect.style.flex = '1';
+    posSelect.style.padding = '6px 8px';
+    posSelect.style.border = '1px solid var(--line)';
+    posSelect.style.borderRadius = '6px';
+    posSelect.style.fontSize = '13px';
+    posSelect.style.fontFamily = 'inherit';
+    posSelect.style.background = '#FCFBF8';
+    const posOptions = [
+      { value:'top', label:'위' },
+      { value:'bottom', label:'아래' },
+      { value:'left', label:'왼쪽' },
+      { value:'right', label:'오른쪽' }
+    ];
+    posOptions.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.value;
+      opt.textContent = o.label;
+      if((m.labelPos || 'top') === o.value) opt.selected = true;
+      posSelect.appendChild(opt);
+    });
+    posSelect.addEventListener('change', e => { m.labelPos = e.target.value; redraw(); });
+
+    row1c.appendChild(posLabel);
+    row1c.appendChild(posSelect);
+    item.appendChild(row1c);
+
+    const row2 = document.createElement('div');
+    row2.className = 'row';
+    const sizeLabel = document.createElement('span');
+    sizeLabel.textContent = '크기';
+    sizeLabel.style.fontSize = '12px';
+    sizeLabel.style.color = 'var(--sub)';
+    sizeLabel.style.width = '28px';
+
+    const sizeInput = document.createElement('input');
+    sizeInput.type = 'range';
+    sizeInput.min = '0.5';
+    sizeInput.max = '2.5';
+    sizeInput.step = '0.1';
+    sizeInput.value = m.size || 1;
+    sizeInput.style.flex = '1';
+
+    const sizeValue = document.createElement('span');
+    sizeValue.textContent = (m.size || 1).toFixed(1) + 'x';
+    sizeValue.style.fontSize = '12px';
+    sizeValue.style.color = 'var(--sub)';
+    sizeValue.style.width = '32px';
+    sizeValue.style.textAlign = 'right';
+
+    sizeInput.addEventListener('input', e => {
+      m.size = parseFloat(e.target.value);
+      sizeValue.textContent = m.size.toFixed(1) + 'x';
+      redraw();
+    });
+
+    row2.appendChild(sizeLabel);
+    row2.appendChild(sizeInput);
+    row2.appendChild(sizeValue);
+    item.appendChild(row2);
+
+    markerListEl.appendChild(item);
+  });
+}
+
+// ---------- Extra text items ----------
+const textListEl = document.getElementById('textList');
+const emptyTexts = document.getElementById('emptyTexts');
+
+function addTextItem(){
+  textCounter++;
+  const offset = (textCounter % 6) * 14;
+  texts.push({
+    text: `텍스트 ${textCounter}`,
+    x: 24 + offset,
+    y: 110 + offset,
+    sizeScale: 1,
+    color: '#20242C',
+    _w: 0, _h: 0
+  });
+  redraw();
+  renderTextList();
+}
+
+function removeTextItem(idx){
+  texts.splice(idx, 1);
+  redraw();
+  renderTextList();
+}
+
+function renderTextList(){
+  textListEl.innerHTML = '';
+  emptyTexts.style.display = texts.length ? 'none' : 'block';
+  texts.forEach((t, idx) => {
+    const item = document.createElement('div');
+    item.className = 'marker-item';
+
+    const row1 = document.createElement('div');
+    row1.className = 'row';
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = t.color;
+    colorInput.addEventListener('input', e => { t.color = e.target.value; redraw(); });
+
+    const textInput = document.createElement('input');
+    textInput.type = 'text';
+    textInput.value = t.text;
+    textInput.placeholder = '텍스트 내용';
+    textInput.addEventListener('input', e => { t.text = e.target.value; redraw(); });
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-del';
+    delBtn.textContent = '삭제';
+    delBtn.addEventListener('click', () => removeTextItem(idx));
+
+    row1.appendChild(colorInput);
+    row1.appendChild(textInput);
+    row1.appendChild(delBtn);
+    item.appendChild(row1);
+
+    const row2 = document.createElement('div');
+    row2.className = 'row';
+    const sizeLabel = document.createElement('span');
+    sizeLabel.textContent = '크기';
+    sizeLabel.style.fontSize = '12px';
+    sizeLabel.style.color = 'var(--sub)';
+    sizeLabel.style.width = '28px';
+
+    const sizeInput = document.createElement('input');
+    sizeInput.type = 'range';
+    sizeInput.min = '0.5';
+    sizeInput.max = '3';
+    sizeInput.step = '0.1';
+    sizeInput.value = t.sizeScale || 1;
+    sizeInput.style.flex = '1';
+
+    const sizeValue = document.createElement('span');
+    sizeValue.textContent = (t.sizeScale || 1).toFixed(1) + 'x';
+    sizeValue.style.fontSize = '12px';
+    sizeValue.style.color = 'var(--sub)';
+    sizeValue.style.width = '32px';
+    sizeValue.style.textAlign = 'right';
+
+    sizeInput.addEventListener('input', e => {
+      t.sizeScale = parseFloat(e.target.value);
+      sizeValue.textContent = t.sizeScale.toFixed(1) + 'x';
+      redraw();
+    });
+
+    row2.appendChild(sizeLabel);
+    row2.appendChild(sizeInput);
+    row2.appendChild(sizeValue);
+    item.appendChild(row2);
+
+    textListEl.appendChild(item);
+  });
+}
+
+document.getElementById('addTextBtn').addEventListener('click', addTextItem);
+
+// ---------- Download ----------
+const previewCard = document.getElementById('previewCard');
+const previewImg = document.getElementById('previewImg');
+const previewOpenLink = document.getElementById('previewOpenLink');
+const filenameInput = document.getElementById('filenameInput');
+
+function sanitizeFilename(name){
+  return name.replace(/[\\/:*?"<>|]/g, '').trim();
+}
+
+function buildFinalCanvas(){
+  const pad = 16;
+  const out = document.createElement('canvas');
+  out.width = canvas.width + pad*2;
+  out.height = canvas.height + pad*2;
+  const octx = out.getContext('2d');
+
+  octx.fillStyle = '#ffffff';
+  octx.fillRect(0,0,out.width,out.height);
+
+  octx.drawImage(canvas, pad, pad);
+
+  octx.strokeStyle = '#E3E1D8';
+  octx.lineWidth = 2;
+  octx.strokeRect(1,1,out.width-2,out.height-2);
+
+  return out;
+}
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  if(!img){ alert('먼저 지도 이미지를 올려주세요.'); return; }
+
+  const out = buildFinalCanvas();
+  const rawName = sanitizeFilename(filenameInput.value.trim() || titleInput.value.trim() || '위치도');
+  const filename = rawName + '.png';
+
+  out.toBlob(blob => {
+    if(!blob){
+      // Fallback: dataURL only
+      const dataUrl = out.toDataURL('image/png');
+      showPreview(dataUrl, filename);
+      return;
+    }
+    const blobUrl = URL.createObjectURL(blob);
+
+    // Try a real automatic download first.
+    try{
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }catch(e){ /* ignore, preview fallback still shown below */ }
+
+    showPreview(blobUrl, filename);
+  }, 'image/png');
+});
+
+function showPreview(url, filename){
+  previewImg.src = url;
+  previewOpenLink.href = url;
+  previewOpenLink.download = filename;
+  previewCard.style.display = 'block';
+  previewCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+</script>
+</body>
+</html>

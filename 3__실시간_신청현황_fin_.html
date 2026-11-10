@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>실시간 신청 현황 위젯 생성기</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #eef0f3;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .layout {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 12px; }
+    .layout { gap: 14px; }
+    .panel, .code-box { padding: 16px; }
+  }
+
+  .panel {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e2e4e8;
+    padding: 22px;
+    height: fit-content;
+  }
+
+  .panel h1 {
+    font-size: 17px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .panel .sub {
+    font-size: 12.5px;
+    color: #888;
+    margin-bottom: 18px;
+    line-height: 1.5;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #444;
+    margin-bottom: 6px;
+  }
+
+  .field input[type="text"],
+  .field textarea {
+    width: 100%;
+    border: 1.5px solid #dcdfe4;
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 13px;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #1a1a1a;
+    background: #fafbfc;
+  }
+
+  .field textarea {
+    resize: vertical;
+    min-height: 54px;
+    line-height: 1.5;
+  }
+
+  .field input[type="text"]:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #d42b2b;
+    background: #fff;
+  }
+
+  .size-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .size-control input[type="range"] {
+    flex: 1;
+    accent-color: #d42b2b;
+    height: 4px;
+    cursor: pointer;
+  }
+
+  .size-control input[type="number"] {
+    width: 64px;
+    flex: none;
+    text-align: center;
+  }
+
+  .num-input {
+    width: 100%;
+    border: 1.5px solid #dcdfe4;
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 14px;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #1a1a1a;
+    background: #fff;
+    text-align: center;
+  }
+  .num-input:focus { outline: none; border-color: #d42b2b; }
+
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .swatch-btn {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1.5px #dcdfe4;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+
+  .swatch-btn:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 1.5px #b7bcc4;
+  }
+
+  input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
+
+  .divider {
+    border-top: 1px dashed #e2e4e8;
+    margin: 18px 0 16px;
+  }
+
+  .section-label {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #d42b2b;
+    letter-spacing: 0.3px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .note {
+    font-size: 11.5px;
+    color: #999;
+    background: #f6f7f9;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .btn {
+    flex: 1;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .btn:hover { opacity: 0.85; }
+
+  .btn.primary {
+    background: #1a1a1a;
+    color: #fff;
+  }
+
+  .btn.secondary {
+    background: #f0f1f3;
+    color: #333;
+  }
+
+  .copy-status {
+    font-size: 12px;
+    color: #2e9e4f;
+    font-weight: 700;
+    margin-top: 8px;
+    height: 14px;
+    text-align: center;
+  }
+
+  .preview-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: sticky;
+    top: 20px;
+    align-self: start;
+  }
+
+  @media (max-width: 900px) {
+    .preview-col { position: static; }
+  }
+
+  .preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .preview-header h2 {
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .preview-header span {
+    font-size: 12px;
+    color: #999;
+  }
+
+  .preview-frame-wrap {
+    background: #000;
+    border-radius: 16px;
+    padding: 4px;
+    max-width: 480px;
+  }
+
+  iframe {
+    width: 100%;
+    height: 200px;
+    border: none;
+    display: block;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .code-box {
+    background: #fff;
+    border: 1px solid #e2e4e8;
+    border-radius: 14px;
+    padding: 18px;
+  }
+
+  .quick-copy-box {
+    background: #fff;
+    border: 1px solid #e2e4e8;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .quick-copy-box .quick-copy-text {
+    font-size: 12.5px;
+    color: #666;
+    font-weight: 600;
+  }
+
+  .quick-copy-box .btn {
+    flex: none;
+    padding: 9px 18px;
+  }
+
+  .quick-copy-box .copy-status {
+    margin-top: 0;
+    height: auto;
+  }
+
+  .code-box h3 {
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+
+  .code-box textarea {
+    width: 100%;
+    height: 160px;
+    font-family: monospace;
+    font-size: 11px;
+    color: #444;
+    border: 1px solid #e2e4e8;
+    border-radius: 8px;
+    padding: 10px;
+    resize: vertical;
+    background: #fafbfc;
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- 왼쪽: 편집 패널 -->
+  <div class="panel">
+    <h1>위젯 텍스트 편집</h1>
+    <div class="sub">아래 항목을 수정하면 오른쪽 미리보기에 실시간으로 반영됩니다.<br>카테고리를 바꾸면 표 구성과 명단 데이터가 함께 전환됩니다.</div>
+
+    <div class="field" id="field-cost-toggle" style="border:1.5px solid #dcdfe4; border-radius:10px; padding:12px; background:#fafbfc;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:0;">
+        <input type="checkbox" id="f-cost-enabled" checked style="width:auto; margin:0;">
+        예상 비용 안내 박스 표시 <span style="font-weight:400; color:#888;">(상단에 "OO님의 예상 비용은 OO입니다" 박스 추가, 실시간 신청현황 위에 배치)</span>
+      </label>
+    </div>
+
+    <div class="field" id="field-cost-color">
+      <label>예상 비용 박스 색상 <span style="font-weight:400; color:#999;">(입력칸 테두리·배경색, CVR 유리한 순)</span></label>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="color" id="f-cost-color-picker" value="#d42b2b" style="width:38px; height:34px; border:1.5px solid #dcdfe4; border-radius:8px; cursor:pointer; flex:none;">
+        <input type="text" id="f-cost-color" value="#d42b2b" style="flex:1;">
+      </div>
+      <div class="color-swatches" style="display:flex; gap:8px; margin-top:8px;">
+        <button type="button" class="swatch-btn cost-color-swatch" data-color="#FF6B35" title="1위 · 레드오렌지 (긴급하지만 덜 자극적)" style="background:#FF6B35;"></button>
+        <button type="button" class="swatch-btn cost-color-swatch" data-color="#F5A623" title="2위 · 앰버골드 (혜택·가치 강조)" style="background:#F5A623;"></button>
+        <button type="button" class="swatch-btn cost-color-swatch" data-color="#16A34A" title="3위 · 딥그린 (절약·안심, 비용 박스에 적합)" style="background:#16A34A;"></button>
+        <button type="button" class="swatch-btn cost-color-swatch" data-color="#2563EB" title="4위 · 블루 (신뢰, 고관여 상품에 유리)" style="background:#2563EB;"></button>
+        <button type="button" class="swatch-btn cost-color-swatch" data-color="#d42b2b" title="5위 · 레드 (기본, 가장 강렬하지만 자극적일 수 있음)" style="background:#d42b2b;"></button>
+      </div>
+      <div style="font-size:11px; color:#999; margin-top:6px; line-height:1.5;">순수 레드는 클릭 유도는 강하지만 페이지에 따라 경고성으로 보일 수 있습니다. 비용/혜택 박스에는 레드오렌지·그린 계열이 무난하게 잘 통합니다.</div>
+    </div>
+
+    <div class="field">
+      <label>카테고리</label>
+      <select id="f-category" style="width:100%; border:1.5px solid #dcdfe4; border-radius:8px; padding:9px 10px; font-size:14px; font-family:'Noto Sans KR', sans-serif; color:#1a1a1a; background:#fafbfc;">
+        <option value="apply" selected>청소년 (기본형 • 연락처/출생년도/상태)</option>
+        <option value="nexen">[넥센] 타이어 (날짜/이름/차종)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>위젯 배경색</label>
+      <div class="row2">
+        <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13px; color:#333; cursor:pointer;">
+          <input type="radio" name="bg-mode" id="f-bg-light" value="light" style="width:auto;"> 흰색
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13px; color:#333; cursor:pointer;">
+          <input type="radio" name="bg-mode" id="f-bg-dark" value="dark" checked style="width:auto;"> 검정
+        </label>
+      </div>
+      <div style="font-size:11.5px; color:#999; margin-top:6px; line-height:1.5;">흰색 선택 시 카드 전체가 화이트 테마로 바뀌고, 표 헤더·LIVE뱃지가 아래 포인트 컬러로 채워집니다.</div>
+    </div>
+
+    <div class="field">
+      <label>랜딩페이지 인기 컬러 8종 <span style="font-weight:400; color:#999;">(우선순위 1~8위, 클릭 시 포인트 컬러에 적용)</span></label>
+      <div class="landing-color-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-top:8px;">
+        <button type="button" class="landing-swatch-btn" data-color="#FF3B30" title="1위 · 레드 (긴급·마감임박)" style="display:flex; flex-direction:column; align-items:center; gap:4px; border:1.5px solid #dcdfe4; border-radius:10px; padding:8px 4px 6px; background:#fafbfc; cursor:pointer; font-family:'Noto Sans KR', sans-serif;">
+          <span style="width:100%; height:22px; border-radius:6px; background:#FF3B30;"></span>
+          <span style="font-size:10px; font-weight:700; color:#444;">1위 레드</span>
+        </button>
+        <button type="button" class="landing-swatch-btn" data-color="#FF6600" title="2위 · 오렌지 (할인·CTA)" style="display:flex; flex-direction:column; align-items:center; gap:4px; border:1.5px solid #dcdfe4; border-radius:10px; padding:8px 4px 6px; background:#fafbfc; cursor:pointer; font-family:'Noto Sans KR', sans-serif;">
+          <span style="width:100%; height:22px; border-radius:6px; background:#FF6600;"></span>
+          <span style="font-size:10px; font-weight:700; color:#444;">2위 오렌지</span>
+        </button>
+        <button type="button" class="landing-swatch-btn" data-color="#FFC700" title="3위 · 옐로우 (이벤트·주의환기)" style="display:flex; flex-direction:column; align-items:center; gap:4px; border:1.5px solid #dcdfe4; border-radius:10px; padding:8px 4px 6px; background:#fafbfc; cursor:pointer; font-family:'Noto Sans KR', sans-serif;">
+          <span style="width:100%; height:22px; border-radius:6px; background:#FFC700;"></span>
+          <span style="font-size:10px; font-weight:700; color:#444;">3위 옐로우</span>
+        </button>
+        <button type="button" class="landing-swatch-btn" data-color="#22C55E" title="4위 · 그린 (성공·완료·안심)" style="display:flex; flex-direction:column; align-items:center; gap:4px; border:1.5px solid #dcdfe4; border-radius:10px; padding:8px 4px 6px; background:#fafbfc; cursor:pointer; font-family:'Noto Sans KR', sans-serif;">
+          <span style="width:100%; height:22px; border-radius:6px; background:#22C55E;"></span>
+          <span style="font-size:10px; font-weight:700; color:#444;">4위 그린</span>
+        </button>
+        <button type="button" class="landing-swatch-btn" data-color="#2563EB" title="5위 · 블루 (신뢰·브랜드)" style="display:flex; flex-direction:column; align-items:center; gap:4px; border:1.5px solid #dcdfe4; border-radius:10px; padding:8px 4px 6px; background:#fafbfc; cursor:pointer; font-family:'Noto Sans KR', sans-serif;">
+          <span style="width:100%; height:22px; border-radius:6px; background:#2563EB;"></span>
+          <span style="font-size:10px; font-weight:700; color:#444;">5위 블루</span>
+        </button>
+        <button type="button" class="landing-swatch-btn" data-color="#7C3AED" title="6위 · 퍼플 (프리미엄·테크)" style="display:flex; flex-direction:column; align-items:center; gap:4px; border:1.5px solid #dcdfe4; border-radius:10px; padding:8px 4px 6px; background:#fafbfc; cursor:pointer; font-family:'Noto Sans KR', sans-serif;">
+          <span style="width:100%; height:22px; border-radius:6px; background:#7C3AED;"></span>
+          <span style="font-size:10px; font-weight:700; color:#444;">6위 퍼플</span>
+        </button>
+        <button type="button" class="landing-swatch-btn" data-color="#EC4899" title="7위 · 핑크 (트렌디·뷰티)" style="display:flex; flex-direction:column; align-items:center; gap:4px; border:1.5px solid #dcdfe4; border-radius:10px; padding:8px 4px 6px; background:#fafbfc; cursor:pointer; font-family:'Noto Sans KR', sans-serif;">
+          <span style="width:100%; height:22px; border-radius:6px; background:#EC4899;"></span>
+          <span style="font-size:10px; font-weight:700; color:#444;">7위 핑크</span>
+        </button>
+        <button type="button" class="landing-swatch-btn" data-color="#1E293B" title="8위 · 다크네이비 (고급·신뢰)" style="display:flex; flex-direction:column; align-items:center; gap:4px; border:1.5px solid #dcdfe4; border-radius:10px; padding:8px 4px 6px; background:#fafbfc; cursor:pointer; font-family:'Noto Sans KR', sans-serif;">
+          <span style="width:100%; height:22px; border-radius:6px; background:#1E293B;"></span>
+          <span style="font-size:10px; font-weight:700; color:#444;">8위 네이비</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">상단 문구</div>
+
+    <div class="field">
+      <label>LIVE 뱃지 텍스트</label>
+      <input type="text" id="f-live" value="LIVE">
+    </div>
+
+    <div class="field">
+      <label>LIVE 깜빡이 동그라미 색상</label>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="color" id="f-live-dot-picker" value="#ff0000" style="width:38px; height:34px; border:1.5px solid #dcdfe4; border-radius:8px; cursor:pointer; flex:none;">
+        <input type="text" id="f-live-dot-color" value="#ff0000" style="flex:1;">
+      </div>
+      <div class="color-swatches" style="display:flex; gap:8px; margin-top:8px;">
+        <button type="button" class="swatch-btn live-dot-swatch" data-color="#ff0000" title="기본 레드" style="background:#ff0000;"></button>
+        <button type="button" class="swatch-btn live-dot-swatch" data-color="#00e05a" title="그린" style="background:#00e05a;"></button>
+        <button type="button" class="swatch-btn live-dot-swatch" data-color="#ffcc00" title="옐로우" style="background:#ffcc00;"></button>
+        <button type="button" class="swatch-btn live-dot-swatch" data-color="#00b0ff" title="블루" style="background:#00b0ff;"></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>제목</label>
+      <input type="text" id="f-title" value="실시간 신청 현황">
+    </div>
+
+    <div class="field">
+      <label>강조 문구 앞 아이콘</label>
+      <select id="f-desc-icon" style="width:100%; border:1.5px solid #dcdfe4; border-radius:8px; padding:9px 10px; font-size:14px; font-family:'Noto Sans KR', sans-serif; color:#1a1a1a; background:#fafbfc;">
+        <option value="🔥">🔥 불꽃</option>
+        <option value="🚨">🚨 경보</option>
+        <option value="⚠️">⚠️ 경고</option>
+        <option value="⏰" selected>⏰ 시계</option>
+        <option value="⚡">⚡ 번개</option>
+        <option value="💥">💥 폭발</option>
+        <option value="📢">📢 확성기</option>
+        <option value="🎉">🎉 축하</option>
+        <option value="✨">✨ 반짝임</option>
+        <option value="❗">❗ 느낌표</option>
+        <option value="👉">👉 손가락</option>
+        <option value="">아이콘 없음</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>강조 문구</label>
+      <textarea id="f-desc">딱 3자리! 곧 마감됩니다</textarea>
+      <div style="font-size:11.5px; color:#999; margin-top:6px; margin-bottom:8px; line-height:1.5;">아래 버튼을 누르면 아이콘+문구가 한 번에 교체됩니다.</div>
+      <div id="desc-preset-list" style="display:flex; flex-direction:column; gap:6px;">
+        <button type="button" class="btn secondary desc-preset-btn" data-icon="⏰" data-text="딱 3자리! 곧 마감됩니다" style="width:100%; padding:8px 0; font-size:12.5px;">⏰ 딱 3자리! 곧 마감됩니다</button>
+        <button type="button" class="btn secondary desc-preset-btn" data-icon="🚨" data-text="잔여 3자리! 채워지면 폼 자동 폐쇄" style="width:100%; padding:8px 0; font-size:12.5px;">🚨 잔여 3자리! 채워지면 폼 자동 폐쇄</button>
+        <button type="button" class="btn secondary desc-preset-btn" data-icon="⚠️" data-text="딱 3자리! 놓치면 추가 모집 없음" style="width:100%; padding:8px 0; font-size:12.5px;">⚠️ 딱 3자리! 놓치면 추가 모집 없음</button>
+        <button type="button" class="btn secondary desc-preset-btn" data-icon="⚠️" data-text="마지막 3자리! 고민하면 바로 마감" style="width:100%; padding:8px 0; font-size:12.5px;">⚠️ 마지막 3자리! 고민하면 바로 마감</button>
+        <button type="button" class="btn secondary desc-preset-btn" data-icon="⏰" data-text="딱 3자리! 접수 후 마감됩니다" style="width:100%; padding:8px 0; font-size:12.5px;">⏰ 딱 3자리! 접수 후 마감됩니다</button>
+      </div>
+    </div>
+
+    <div class="field" id="field-numswap" style="border:1.5px solid #dcdfe4; border-radius:10px; padding:12px; background:#fafbfc;">
+      <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px; cursor:pointer;">
+        <input type="checkbox" id="f-num-enabled" checked style="width:auto; margin:0;">
+        숫자 자동 변경 (타이머가 지정 시점에 도달하면 강조 문구의 숫자가 바뀝니다)
+      </label>
+      <div style="font-size:11.5px; color:#888; margin-bottom:10px; line-height:1.5;">타이머는 화면에 보이지 않고 내부에서만 동작합니다. 위젯이 열리는 순간 시작 시간부터 카운트다운하고, 전환 시점이 되면 숫자가 한 번만 바뀝니다.</div>
+      <label>타이머 방식</label>
+      <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px; font-size:13px;">
+        <label style="display:flex; align-items:center; gap:6px; font-weight:400; margin:0; cursor:pointer;"><input type="radio" name="f-timer-mode" id="f-timer-fixed" checked style="width:auto; margin:0;"> 직접 설정 (열릴 때마다 아래 시작 시간부터 카운트다운)</label>
+        <label style="display:flex; align-items:center; gap:6px; font-weight:400; margin:0; cursor:pointer;"><input type="radio" name="f-timer-mode" id="f-timer-midnight" style="width:auto; margin:0;"> 자동 (오늘 자정까지 남은 시간)</label>
+      </div>
+      <label>타이머 시작 (분 / 초 / 1/100초) — 직접 설정일 때 사용</label>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">
+        <input type="number" class="num-input" id="f-start-min" value="10" min="0" max="99" step="1">
+        <input type="number" class="num-input" id="f-start-sec" value="1" min="0" max="59" step="1">
+        <input type="number" class="num-input" id="f-start-cs" value="32" min="0" max="99" step="1">
+      </div>
+      <label>전환 시점 (분 / 초) — 남은 시간이 이 값 이하가 되면 숫자 변경</label>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+        <input type="number" class="num-input" id="f-switch-min" value="9" min="0" max="99" step="1">
+        <input type="number" class="num-input" id="f-switch-sec" value="20" min="0" max="59" step="1">
+      </div>
+      <label>바뀔 숫자 (변경 전 → 변경 후)</label>
+      <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center;">
+        <input type="text" class="num-input" id="f-num-from" value="3" maxlength="4">
+        <span style="font-weight:700; color:#888;">→</span>
+        <input type="text" class="num-input" id="f-num-to" value="2" maxlength="4">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>제목 · 강조 문구 글자 크기 (px) — 실시간 신청 현황과 동일하게 적용됩니다</label>
+      <div class="size-control">
+        <input type="range" id="f-desc-size-range" value="22" step="1" min="12" max="40">
+        <input type="number" id="f-desc-size" value="22" step="1" min="12" max="40">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>강조 문구 모션</label>
+      <select id="f-desc-motion" style="width:100%; border:1.5px solid #dcdfe4; border-radius:8px; padding:9px 10px; font-size:14px; font-family:'Noto Sans KR', sans-serif; color:#1a1a1a; background:#fafbfc;">
+        <option value="numpulse" selected>숫자만 움직임 (추천 · 문구는 고정)</option>
+        <option value="blink">문구 전체 깜빡임</option>
+        <option value="pulse">확대·축소</option>
+        <option value="shake">좌우 흔들림</option>
+        <option value="bounce">위아래 흔들림</option>
+        <option value="wiggle">까딱까딱</option>
+        <option value="glow">네온 글로우</option>
+        <option value="none">모션 없음</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>숫자 강조 스타일 (강조 문구 속 숫자)</label>
+      <select id="f-num-style" style="width:100%; border:1.5px solid #dcdfe4; border-radius:8px; padding:9px 10px; font-size:14px; font-family:'Noto Sans KR', sans-serif; color:#1a1a1a; background:#fafbfc;">
+        <option value="chip">채움 칩 (포인트 컬러 배경 + 굵은 글자)</option>
+        <option value="text" selected>굵고 크게 (추천 · 글자색은 그대로)</option>
+        <option value="none">강조 없음</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>숫자 강조 색상 (강조 문구 속 숫자 색)</label>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="color" id="f-num-color-picker" value="#d42b2b" style="width:38px; height:34px; border:1.5px solid #dcdfe4; border-radius:8px; cursor:pointer; flex:none;">
+        <input type="text" id="f-num-color" value="#d42b2b" style="flex:1;">
+      </div>
+      <div class="color-swatches" style="display:flex; gap:8px; margin-top:8px;">
+        <button type="button" class="swatch-btn num-color-swatch" data-color="#d42b2b" title="레드 (기본)" style="background:#d42b2b;"></button>
+        <button type="button" class="swatch-btn num-color-swatch" data-color="#F5A623" title="골드 앰버" style="background:#F5A623;"></button>
+        <button type="button" class="swatch-btn num-color-swatch" data-color="#1f7a4d" title="딥그린" style="background:#1f7a4d;"></button>
+        <button type="button" class="swatch-btn num-color-swatch" data-color="#1e3a5f" title="네이비" style="background:#1e3a5f;"></button>
+        <button type="button" class="swatch-btn num-color-swatch" data-color="#ffffff" title="화이트" style="background:#ffffff;"></button>
+        <button type="button" class="swatch-btn num-color-swatch" data-color="#FFDD00" title="비비드 옐로우 (칩 스타일 권장)" style="background:#FFDD00;"></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>포인트 컬러</label>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="color" id="f-accent-picker" value="#d42b2b" style="width:38px; height:34px; border:1.5px solid #dcdfe4; border-radius:8px; cursor:pointer; flex:none;">
+        <input type="text" id="f-accent" value="#d42b2b" style="flex:1;">
+      </div>
+      <div class="color-swatches" style="display:flex; gap:8px; margin-top:8px;">
+        <button type="button" class="swatch-btn" data-color="#d42b2b" title="기본 레드" style="background:#d42b2b;"></button>
+        <button type="button" class="swatch-btn" data-color="#b0203a" title="버건디 (샘플 참고)" style="background:#b0203a;"></button>
+        <button type="button" class="swatch-btn" data-color="#1e3a5f" title="네이비" style="background:#1e3a5f;"></button>
+        <button type="button" class="swatch-btn" data-color="#1f7a4d" title="딥그린" style="background:#1f7a4d;"></button>
+        <button type="button" class="swatch-btn" data-color="#d97706" title="앰버" style="background:#d97706;"></button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">표 헤더</div>
+
+    <div class="row2">
+      <div class="field">
+        <label>1열</label>
+        <input type="text" id="f-col1" value="날짜">
+      </div>
+      <div class="field">
+        <label>2열</label>
+        <input type="text" id="f-col2" value="이름">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>3열</label>
+        <input type="text" id="f-col3" value="차종">
+      </div>
+      <div class="field" id="field-col4" style="display:none;">
+        <label>4열</label>
+        <input type="text" id="f-col4" value="현황">
+      </div>
+    </div>
+
+    <div class="field" id="field-year" style="display:none;">
+      <label>출생년도 범위 (이 범위 안에서 랜덤 표시)</label>
+      <div class="row2">
+        <input type="number" id="f-year-min" value="2008" placeholder="시작년도">
+        <input type="number" id="f-year-max" value="2013" placeholder="끝년도">
+      </div>
+      <div class="row2" style="margin-top:8px;">
+        <button type="button" class="btn secondary" id="btn-year-preset-1" style="flex:none; padding:8px 0; font-size:12.5px;">2008~2013년생</button>
+        <button type="button" class="btn secondary" id="btn-year-preset-2" style="flex:none; padding:8px 0; font-size:12.5px;">2013~2021년생</button>
+      </div>
+      <button type="button" class="btn secondary" id="btn-year-preset-3" style="width:100%; margin-top:8px; padding:8px 0; font-size:12.5px;">2014~2019년생(초등 1~6학년, 8~13세)</button>
+      <button type="button" class="btn secondary" id="btn-year-preset-4" style="width:100%; margin-top:8px; padding:8px 0; font-size:12.5px;">2014~2023년생</button>
+      <button type="button" class="btn secondary" id="btn-year-preset-5" style="width:100%; margin-top:8px; padding:8px 0; font-size:12.5px;">2012~2022년생</button>
+    </div>
+
+    <div class="divider" id="divider-status" style="display:none;"></div>
+    <div class="section-label" id="label-status" style="display:none;">상태 라벨</div>
+
+    <div class="row2" id="field-status" style="display:none;">
+      <div class="field">
+        <label>완료 상태 텍스트</label>
+        <input type="text" id="f-done" value="신청완료">
+      </div>
+      <div class="field">
+        <label>대기 상태 텍스트</label>
+        <input type="text" id="f-pend" value="접수대기">
+      </div>
+    </div>
+
+    <div class="note" id="note-nexen">※ 1열(날짜)은 위젯을 여는 그 순간의 오늘 날짜가 항상 자동으로 표시됩니다. 이름·차종 명단은 이 생성기에서 수정할 수 없습니다 — 명단 자체를 바꾸려면 코드를 직접 편집해주세요.</div>
+    <div class="note" id="note-apply" style="display:none;">※ 명단의 이름·연락처·상태는 이 생성기에서 수정할 수 없습니다. 출생년도는 위 범위 안에서 위젯이 열릴 때마다 랜덤으로 표시됩니다. 명단 자체를 바꾸려면 코드를 직접 편집해주세요.</div>
+
+    <div class="divider"></div>
+    <div class="section-label">하단 안내 문구</div>
+
+    <div class="field">
+      <label>문구 내용</label>
+      <textarea id="f-footer">🔒 광고·스팸 없음 | 참여 확인용으로만 사용됩니다</textarea>
+    </div>
+
+    <div class="field">
+      <label>글자 크기 (px)</label>
+      <div class="size-control">
+        <input type="range" id="f-footer-size-range" value="40" step="0.5" min="8" max="60">
+        <input type="number" id="f-footer-size" value="40" step="0.5" min="8" max="60">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>위쪽 여백 (px)</label>
+        <input type="number" id="f-footer-margin-top" value="12" step="1" min="0" max="60">
+      </div>
+      <div class="field">
+        <label>아래쪽 여백 (px)</label>
+        <input type="number" id="f-footer-margin-bottom" value="10" step="1" min="0" max="60">
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">회사 정보 (맨 아래 고정 문구)</div>
+
+    <div class="field">
+      <label>내용 (줄바꿈 입력 가능)</label>
+      <textarea id="f-company" style="min-height:80px;">(주)플로르방송제작사-강남 ALL RIGHTS RESERVED.
+서울특별시 강남구 테헤란로33길 3-12, 5층(우리빌딩)
+대표자명 이경애 | 사업자번호 451-85-01937</textarea>
+    </div>
+
+    <div class="field">
+      <label>글자 크기 (px)</label>
+      <div class="size-control">
+        <input type="range" id="f-company-size-range" value="36" step="0.5" min="8" max="56">
+        <input type="number" id="f-company-size" value="36" step="0.5" min="8" max="56">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>위쪽 여백 (px)</label>
+        <input type="number" id="f-company-margin-top" value="16" step="1" min="0" max="60">
+      </div>
+      <div class="field">
+        <label>글자 색상</label>
+        <input type="text" id="f-company-color" value="#999999">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn secondary" id="btn-reset">초기값으로</button>
+      <button class="btn primary" id="btn-copy">코드 복사</button>
+    </div>
+    <div class="copy-status" id="copy-status"></div>
+  </div>
+
+  <!-- 오른쪽: 미리보기 + 코드 -->
+  <div class="preview-col">
+    <div class="preview-header">
+      <h2>미리보기</h2>
+      <span>실제 삽입 시 모습과 동일합니다</span>
+    </div>
+
+    <div class="preview-frame-wrap">
+      <iframe id="preview"></iframe>
+    </div>
+
+    <div class="quick-copy-box">
+      <span class="quick-copy-text">완성된 위젯 코드를 바로 복사하세요</span>
+      <button class="btn primary" id="btn-copy-quick">코드 복사</button>
+    </div>
+    <div class="copy-status" id="copy-status-quick"></div>
+
+    <div class="code-box">
+      <h3>완성된 HTML 코드</h3>
+      <textarea id="code-output" readonly></textarea>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// 브라우저가 내보내는 무해한 ResizeObserver 경고만 걸러내기 (실제 오류는 그대로 출력됨)
+window.addEventListener('error', (e) => {
+  if (e.message && e.message.indexOf('ResizeObserver loop') !== -1) {
+    e.stopImmediatePropagation();
+    if (e.preventDefault) e.preventDefault();
+  }
+});
+
+// 카테고리별 명단 데이터 (이름·연락처/차종 등은 수정 불가, 고정)
+const CATEGORY_DATA = {
+  apply: [
+    {name:'조*호', phone:'010-****-8347', status:'done'},
+    {name:'노*영', phone:'010-****-2194', status:'done'},
+    {name:'강*우', phone:'010-****-6023', status:'done'},
+    {name:'임*진', phone:'010-****-4851', status:'pend'},
+    {name:'문*아', phone:'010-****-7362', status:'done'},
+    {name:'장*나', phone:'010-****-9107', status:'done'},
+    {name:'박*준', phone:'010-****-3478', status:'done'},
+    {name:'김*현', phone:'010-****-5219', status:'done'},
+    {name:'이*서', phone:'010-****-8630', status:'pend'},
+    {name:'최*지', phone:'010-****-1745', status:'done'},
+    {name:'윤*희', phone:'010-****-4082', status:'done'}
+  ],
+  nexen: {
+    names: ['이*호','최*빈','정*경','강*재','배*수','윤*주','오*찬','서*원','신*환','홍*수','유*호','전*석','함*호','조*현','김*우','박*훈'],
+    cars: ['코란도c','소나타 yf','아반떼','비엠더블유 엑스오3.0','스포티지','펠리세이드','16식투싼','그랜저 HG','EQ900','C-200','올뉴쏘렌토','트랙스 크로스오버','쏘렌토 구형(2세대)','그렌저 하이브렌드','갭티바','렉스턴']
+  }
+};
+
+// 카테고리별 표 헤더/라벨 기본값
+const CATEGORY_PRESETS = {
+  apply: { col1:'이름', col2:'연락처', col3:'출생년도', col4:'현황', done:'신청완료', pend:'접수대기', yearMin:2008, yearMax:2013 },
+  nexen: { col1:'날짜', col2:'이름', col3:'차종' }
+};
+
+const DEFAULTS = {
+  costEnabled: true,
+  live: 'LIVE',
+  title: '실시간 신청 현황',
+  desc: '딱 3자리! 곧 마감됩니다',
+  descIcon: '⏰',
+  numEnabled: true, numFrom: '3', numTo: '2',
+  startMin: 10, startSec: 1, startCs: 32, switchMin: 9, switchSec: 20, timerMode: 'fixed',
+  descSize: 22,
+  descMotion: 'numpulse',
+  numStyle: 'text',
+  numColor: '#d42b2b',
+  bgMode: 'dark',
+  accent: '#d42b2b',
+  costBoxColor: '#d42b2b',
+  liveDotColor: '#ff0000',
+  footer: '🔒 광고·스팸 없음 | 참여 확인용으로만 사용됩니다',
+  footerSize: 40, footerMarginTop: 12, footerMarginBottom: 10,
+  company: '(주)플로르방송제작사-강남 ALL RIGHTS RESERVED.\n서울특별시 강남구 테헤란로33길 3-12, 5층(우리빌딩)\n대표자명 이경애 | 사업자번호 451-85-01937',
+  companySize: 36, companyMarginTop: 16, companyColor: '#999999'
+};
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function hexToRgba(hex, alpha) {
+  let h = String(hex).replace('#', '').trim();
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const r = parseInt(h.substring(0, 2), 16) || 0;
+  const g = parseInt(h.substring(2, 4), 16) || 0;
+  const b = parseInt(h.substring(4, 6), 16) || 0;
+  return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+}
+
+function contrastText(hex) {
+  let h = String(hex).replace('#', '').trim();
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const lin = function (c) { c = c / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const L = 0.2126 * lin(parseInt(h.substring(0, 2), 16) || 0)
+          + 0.7152 * lin(parseInt(h.substring(2, 4), 16) || 0)
+          + 0.0722 * lin(parseInt(h.substring(4, 6), 16) || 0);
+  return L > 0.4 ? '#111111' : '#ffffff';
+}
+
+function buildHTML(v) {
+  const isApply = v.category === 'apply';
+  const dataJs = JSON.stringify(CATEGORY_DATA[v.category] || CATEGORY_DATA.nexen);
+  const gridCols = isApply ? '18% 30% 22% 30%' : '30% 30% 40%';
+  const gridColsNarrow = isApply ? '20% 32% 20% 28%' : '30% 30% 40%';
+  const colHeadHTML = isApply
+    ? '<span>' + esc(v.col1) + '</span>\n        <span>' + esc(v.col2) + '</span>\n        <span>' + esc(v.col3) + '</span>\n        <span>' + esc(v.col4) + '</span>'
+    : '<span>' + esc(v.col1) + '</span>\n        <span>' + esc(v.col2) + '</span>\n        <span>' + esc(v.col3) + '</span>';
+  const isDark = v.bgMode === 'dark';
+  const pageBg = isDark ? '#000000' : '#ffffff';
+  const colorScheme = isDark ? 'dark' : 'light';
+  const accent = v.accentColor || '#d42b2b';
+  const liveDot = v.liveDotColor || '#ff0000';
+  const liveDotGlow60 = hexToRgba(liveDot, 0.6);
+  const liveDotGlow80 = hexToRgba(liveDot, 0.8);
+  const accentGlow15 = hexToRgba(accent, 0.15);
+  const accentGlow75 = hexToRgba(accent, 0.75);
+  const accentGlow40 = hexToRgba(accent, 0.4);
+  const costBoxColor = v.costBoxColor || '#d42b2b';
+  const costBoxGlow15 = hexToRgba(costBoxColor, 0.15);
+  const cardBg = isDark ? '#f5f5f5' : '#ffffff';
+  const cardBorder = isDark ? '#222' : '#e5e5e5';
+  const cardShadow = isDark ? 'none' : '0 4px 20px rgba(0,0,0,0.06)';
+  const headBg = isDark ? '#1a1a1a' : accent;
+  const DESC_MOTIONS = {
+    numpulse: 'none',
+    blink:  'descBlink 1s ease-in-out infinite',
+    pulse:  'descPulse 1s ease-in-out infinite',
+    shake:  'descShake 1.2s ease-in-out infinite',
+    bounce: 'descBounce 1s ease-in-out infinite',
+    wiggle: 'descWiggle 0.9s ease-in-out infinite',
+    glow:   'descGlow 1.4s ease-in-out infinite',
+    none:   'none'
+  };
+  const descMotionCSS = DESC_MOTIONS[v.descMotion] || DESC_MOTIONS.blink;
+
+  // 강조 문구 안의 첫 번째 '변경 전 숫자'를 <span id="sw-num">으로 감싸 타이머가 교체할 수 있게 함
+  let descHTML = esc(v.desc);
+  let numSwapOn = false;
+  let hiText = '', hiIdx = -1;
+  if (v.numFrom && v.desc.indexOf(v.numFrom) >= 0) {
+    hiText = v.numFrom; hiIdx = v.desc.indexOf(v.numFrom);
+  } else {
+    const dm = v.desc.match(/\d+/);
+    if (dm) { hiText = dm[0]; hiIdx = dm.index; }
+  }
+  if (hiIdx >= 0) {
+    descHTML = esc(v.desc.slice(0, hiIdx)) + '<span class="sw-num" id="sw-num">' + esc(hiText) + '</span>' + esc(v.desc.slice(hiIdx + hiText.length));
+    numSwapOn = !!(v.numEnabled && v.numFrom && v.numTo && hiText === v.numFrom);
+  }
+  let numStartMs = (v.startMin * 60 + v.startSec) * 1000 + v.startCs * 10;
+  if (!(numStartMs > 0)) numStartMs = 10 * 60000 + 1 * 1000 + 32 * 10;
+  const numSwitchMs = (v.switchMin * 60 + v.switchSec) * 1000;
+
+  // 숫자 강조 스타일 (chip: 포인트컬러 채움 칩 / text: 굵고 크게 / none: 기존)
+  const numStyle = v.numStyle || 'chip';
+  const numColor = v.numColor || '#d42b2b';
+  const numMotionOn = v.descMotion === 'numpulse';
+  let numBase = 'display: inline-block;';
+  if (numStyle === 'chip') {
+    numBase += ' font-weight: 900; font-size: 1.1em; line-height: 1.1; padding: 0 0.22em; margin: 0 0.04em; border-radius: 0.28em; background: ' + numColor + '; color: ' + contrastText(numColor) + ';';
+  } else if (numStyle === 'text') {
+    numBase += ' font-weight: 900; font-size: 1.18em; line-height: 1; -webkit-text-stroke: 0.4px currentColor; color: ' + numColor + ';';
+  }
+  const pulseName = numStyle === 'chip' ? 'numPulseChip' : 'numPulse';
+  const numAnimBase = numMotionOn ? pulseName + ' 1.8s ease-in-out infinite' : 'none';
+  const numAnimFlip = numMotionOn
+    ? 'swNumPop 0.5s ease-out, ' + pulseName + ' 1.8s ease-in-out 0.5s infinite'
+    : 'swNumPop 0.5s ease-out';
+  const ringOn  = hexToRgba(accent, 0.55);
+  const ringOff = hexToRgba(accent, 0);
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="${colorScheme}">
+  <title>실시간 신청 현황</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { background: ${pageBg}; }
+    body { background: ${pageBg}; padding: 4px; color-scheme: ${colorScheme}; }
+
+
+    .sw-box {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: ${cardBg};
+      border: 1.5px solid ${cardBorder};
+      border-radius: 12px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 100%;
+      margin-bottom: 0;
+      box-shadow: ${cardShadow};
+    }
+
+    .sw-inner { padding: clamp(10px, 3vw, 12px) 0 0; }
+
+    .sw-live-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      background: ${headBg};
+      color: #fff;
+      border-radius: 999px;
+      padding: clamp(5px, 1.6vw, 6px) clamp(12px, 4vw, 18px);
+      font-size: clamp(10px, 3vw, 12px);
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      width: fit-content;
+      max-width: 90%;
+      margin: 0 auto 10px;
+      text-shadow: 0 0 8px ${liveDotGlow60};
+    }
+
+    .sw-live-dot {
+      width: 7px;
+      height: 7px;
+      flex: none;
+      background: ${liveDot};
+      border-radius: 50%;
+      box-shadow: 0 0 6px 1px ${liveDotGlow80};
+      animation: blink 1.2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.25; }
+    }
+
+    .sw-title {
+      text-align: center;
+      font-size: clamp(15px, 5.2vw, ${v.descSize}px);
+      font-weight: 800;
+      color: #111;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+      padding: 0 8px;
+      word-break: keep-all;
+    }
+
+    .sw-desc {
+      text-align: center;
+      font-size: clamp(15px, 5.2vw, ${v.descSize}px);
+      font-weight: 700;
+      color: ${accent};
+      line-height: 1.5;
+      margin-bottom: 12px;
+      padding: 0 10px;
+      word-break: keep-all;
+      display: inline-block;
+      width: 100%;
+      animation: ${descMotionCSS};
+    }
+
+    .sw-num { ${numBase} animation: ${numAnimBase}; }
+    .sw-num.sw-num-flip { animation: ${numAnimFlip}; }
+    @keyframes numPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    @keyframes numPulseChip {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+    @keyframes swNumPop {
+      0%   { transform: scale(1.7); opacity: 0.2; }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+
+    @keyframes descBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    @keyframes descPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    @keyframes descShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-4px); }
+      40% { transform: translateX(4px); }
+      60% { transform: translateX(-3px); }
+      80% { transform: translateX(3px); }
+    }
+
+    @keyframes descBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    @keyframes descWiggle {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-3deg); }
+      75% { transform: rotate(3deg); }
+    }
+
+    @keyframes descGlow {
+      0%, 100% { text-shadow: 0 0 4px ${accentGlow15}; }
+      50% { text-shadow: 0 0 14px ${accentGlow75}, 0 0 22px ${accentGlow40}; }
+    }
+
+    .sw-table-wrap {
+      border-top: 1px solid #e8e8e8;
+      overflow: hidden;
+    }
+
+    .sw-col-head {
+      display: grid;
+      grid-template-columns: ${gridCols};
+      background: ${headBg};
+      padding: clamp(8px, 2.6vw, 10px) clamp(4px, 2vw, 8px);
+    }
+
+    .sw-col-head span {
+      text-align: center;
+      font-size: clamp(10px, 3vw, 12px);
+      font-weight: 600;
+      color: #fff;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+
+    .sw-scroll-wrap {
+      overflow: hidden;
+      position: relative;
+    }
+
+    .sw-scroll {
+      animation: scrollUp var(--dur, 30s) linear infinite;
+    }
+
+    @keyframes scrollUp {
+      0%   { transform: translateY(0); }
+      100% { transform: translateY(-50%); }
+    }
+
+    .sw-row {
+      display: grid;
+      grid-template-columns: ${gridCols};
+      padding: clamp(8px, 2.8vw, 11px) clamp(4px, 2vw, 8px);
+      border-bottom: 1px solid #e8e8e8;
+      align-items: center;
+      background: ${cardBg};
+    }
+
+    .sw-cell {
+      text-align: center;
+      font-size: clamp(10.5px, 3vw, 12px);
+      color: #333;
+      font-weight: 500;
+      font-family: 'Noto Sans KR', sans-serif;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0 2px;
+    }
+
+    .sw-cell.date  { color: #666; font-family: monospace; letter-spacing: 0.2px; font-size: clamp(9.5px, 2.8vw, 12px); }
+    .sw-cell.name  { font-weight: 700; color: #111; font-size: clamp(11.5px, 3.3vw, 13px); }
+    .sw-cell.car   { color: #666; }
+    .sw-cell.phone { color: #666; font-family: monospace; letter-spacing: 0.2px; font-size: clamp(9.5px, 2.8vw, 12px); }
+    .sw-cell.year  { color: #666; }
+
+    .sw-badge {
+      display: inline-block;
+      max-width: 100%;
+      padding: clamp(4px, 1.6vw, 5px) clamp(6px, 2.4vw, 10px);
+      border-radius: 999px;
+      font-size: clamp(9.5px, 2.8vw, 11px);
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+
+    .sw-badge.done {
+      background: ${accent};
+      color: #fff;
+    }
+
+    .sw-badge.pend {
+      background: transparent;
+      color: #666;
+      border: 1.5px solid #ccc;
+    }
+
+    .sw-footer-note {
+      text-align: center;
+      font-size: clamp(10px, 3vw, ${v.footerSize}px);
+      color: #999;
+      font-weight: 500;
+      font-family: 'Noto Sans KR', sans-serif;
+      margin-top: ${v.footerMarginTop}px;
+      margin-bottom: ${v.footerMarginBottom}px;
+      padding: 0 8px;
+    }
+
+    @media (max-width: 340px) {
+      .sw-col-head, .sw-row { grid-template-columns: ${gridColsNarrow}; }
+    }
+
+    .sw-company-info {
+      text-align: center;
+      font-size: clamp(9px, 2.6vw, ${v.companySize}px);
+      color: ${v.companyColor};
+      font-weight: 500;
+      font-family: 'Noto Sans KR', sans-serif;
+      line-height: 1.6;
+      margin-top: ${v.companyMarginTop}px;
+      padding: 0 8px;
+    }
+
+    .sw-cost-box {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: ${cardBg};
+      border: 1.5px solid ${cardBorder};
+      border-radius: 16px;
+      box-shadow: ${cardShadow};
+      padding: clamp(14px, 4.5vw, 20px) clamp(14px, 4vw, 20px);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      row-gap: 8px;
+      column-gap: clamp(6px, 2vw, 9px);
+      text-align: center;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .sw-cost-text {
+      font-size: clamp(13.5px, 4vw, 16px);
+      font-weight: 700;
+      color: #222;
+      white-space: nowrap;
+    }
+
+    .sw-cost-input {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: clamp(58px, 16vw, 76px);
+      height: clamp(30px, 8vw, 36px);
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1.5px solid ${costBoxColor};
+      background: ${costBoxGlow15};
+      flex: none;
+    }
+
+    .sw-cost-input.sw-cost-price {
+      min-width: clamp(76px, 20vw, 100px);
+    }
+
+    .sw-cost-cursor {
+      width: 2px;
+      height: 55%;
+      background: ${costBoxColor};
+      animation: swCostBlink 1s step-end infinite;
+    }
+
+    @keyframes swCostBlink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+${v.costEnabled ? `<div class="sw-cost-box">
+  <span class="sw-cost-input sw-cost-name" aria-hidden="true"></span>
+  <span class="sw-cost-text">님의 예상 비용은</span>
+  <span class="sw-cost-input sw-cost-price" aria-hidden="true"><span class="sw-cost-cursor"></span></span>
+  <span class="sw-cost-text">입니다.</span>
+</div>` : ''}
+
+<div class="sw-box">
+  <div class="sw-inner">
+
+    <div class="sw-live-badge">
+      <div class="sw-live-dot"></div>
+      ${esc(v.live)}
+    </div>
+
+    <div class="sw-title">${esc(v.title)}</div>
+    <div class="sw-desc">
+      ${v.descIcon ? esc(v.descIcon) + ' ' : ''}${descHTML}
+    </div>
+
+    <div class="sw-table-wrap">
+      <div class="sw-col-head">
+        ${colHeadHTML}
+      </div>
+      <div class="sw-scroll-wrap" id="sw-wrap">
+        <div class="sw-scroll" id="sw-scroll"></div>
+      </div>
+    </div>
+
+    <div class="sw-footer-note">${esc(v.footer)}</div>
+
+  </div>
+</div>
+
+${v.company ? `<div class="sw-company-info">${esc(v.company).replace(/\n/g, '<br>')}</div>` : ''}
+
+<script>
+const VISIBLE_ROWS = 6;
+${numSwapOn ? `
+// 숨김 타이머 (타이머 생성기와 동일한 방식): 남은 시간이 ${v.switchMin}분 ${v.switchSec}초 이하가 되면 숫자를 한 번만 변경
+(function () {
+  var TIMER_MODE = ${JSON.stringify(v.timerMode)};
+  var TIMER_MS = ${numStartMs};
+  var SWITCH_AT_MS = ${numSwitchMs};
+  var NUM_TO = ${JSON.stringify(v.numTo)};
+  var el = document.getElementById('sw-num');
+  if (!el) return;
+  var triggered = false;
+
+  function getEndTime() {
+    if (TIMER_MODE === 'midnight') {
+      var n = new Date();
+      return new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 0, 0).getTime();
+    }
+    return Date.now() + TIMER_MS;
+  }
+
+  var endTime = getEndTime();
+  var timerId = null;
+
+  function tick() {
+    var diff = Math.max(0, endTime - Date.now());
+    if (!triggered && diff > 0 && diff <= SWITCH_AT_MS) {
+      triggered = true;
+      el.textContent = NUM_TO;
+      el.classList.add('sw-num-flip');
+      if (timerId) clearInterval(timerId);
+      return;
+    }
+    if (diff <= 0) endTime = getEndTime();
+  }
+
+  tick();
+  if (!triggered) timerId = setInterval(tick, 30);
+})();
+` : ''}
+${isApply ? `
+const data = ${dataJs};
+const DONE_LABEL = ${JSON.stringify(v.done)};
+const PEND_LABEL = ${JSON.stringify(v.pend)};
+const YEAR_MIN = ${v.yearMin};
+const YEAR_MAX = ${v.yearMax};
+
+// 명단 각 인원의 출생년도를 지정한 범위 안에서 무작위로 배정 (위젯을 열 때마다 새로 생성)
+data.forEach(function(r){
+  var span = Math.max(YEAR_MAX - YEAR_MIN, 0);
+  r.year = (YEAR_MIN + Math.floor(Math.random() * (span + 1))) + '년';
+});
+
+function makeRows(rows) {
+  const frag = document.createDocumentFragment();
+  rows.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'sw-row';
+    row.innerHTML =
+      '<div class="sw-cell name">'  + r.name  + '</div>' +
+      '<div class="sw-cell phone">' + r.phone + '</div>' +
+      '<div class="sw-cell year">'  + r.year  + '</div>' +
+      '<div class="sw-cell"><span class="sw-badge ' + r.status + '">' +
+        (r.status === 'done' ? DONE_LABEL : PEND_LABEL) +
+      '</span></div>';
+    frag.appendChild(row);
+  });
+  return frag;
+}
+` : `
+// 모든 행에 위젯을 여는 시점의 오늘 날짜를 표시 (YYYY-MM-DD, 항상 자동 갱신)
+function todayStr() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return yyyy + '-' + mm + '-' + dd;
+}
+const TODAY = todayStr();
+
+// 이름 풀과 차종 풀을 각각 무작위로 섞은 뒤 짝지어서 매번 다른 조합으로 표시
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+const NAME_POOL = ${dataJs}.names;
+const CAR_POOL = ${dataJs}.cars;
+const shuffledNames = shuffle(NAME_POOL);
+const shuffledCars = shuffle(CAR_POOL);
+const data = shuffledNames.map(function(name, i) {
+  return { name: name, car: shuffledCars[i % shuffledCars.length], date: TODAY };
+});
+
+function makeRows(rows) {
+  const frag = document.createDocumentFragment();
+  rows.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'sw-row';
+    row.innerHTML =
+      '<div class="sw-cell date">' + r.date + '</div>' +
+      '<div class="sw-cell name">' + r.name + '</div>' +
+      '<div class="sw-cell car">'  + r.car  + '</div>';
+    frag.appendChild(row);
+  });
+  return frag;
+}
+`}
+
+const wrap   = document.getElementById('sw-wrap');
+const scroll = document.getElementById('sw-scroll');
+
+scroll.appendChild(makeRows(data));
+
+document.fonts.ready.then(() => {
+  const firstRow = scroll.querySelector('.sw-row');
+  const ROW_H = firstRow.getBoundingClientRect().height;
+
+  wrap.style.height = (ROW_H * VISIBLE_ROWS) + 'px';
+
+  scroll.appendChild(makeRows(data));
+
+  const SPEED = 38.5;
+  const duration = (ROW_H * data.length) / SPEED;
+  scroll.style.animationDuration = duration.toFixed(1) + 's';
+});
+<\/script>
+
+</body>
+</html>`;
+}
+
+function clampInt(id, dflt, lo, hi) {
+  let n = parseInt(document.getElementById(id).value, 10);
+  if (isNaN(n)) n = dflt;
+  return Math.min(Math.max(n, lo), hi);
+}
+
+function getValues() {
+  const category = document.getElementById('f-category').value;
+  const CURRENT_YEAR = new Date().getFullYear();
+  let yearMin = parseInt(document.getElementById('f-year-min').value, 10);
+  let yearMax = parseInt(document.getElementById('f-year-max').value, 10);
+  if (isNaN(yearMin)) yearMin = CATEGORY_PRESETS.apply.yearMin;
+  if (isNaN(yearMax)) yearMax = CATEGORY_PRESETS.apply.yearMax;
+  yearMin = Math.min(Math.max(yearMin, 1900), CURRENT_YEAR);
+  yearMax = Math.min(Math.max(yearMax, 1900), CURRENT_YEAR);
+  if (yearMin > yearMax) { const t = yearMin; yearMin = yearMax; yearMax = t; }
+
+  let footerSize = parseFloat(document.getElementById('f-footer-size').value);
+  if (isNaN(footerSize)) footerSize = DEFAULTS.footerSize;
+  footerSize = Math.min(Math.max(footerSize, 8), 60);
+
+  let footerMarginTop = parseFloat(document.getElementById('f-footer-margin-top').value);
+  if (isNaN(footerMarginTop)) footerMarginTop = DEFAULTS.footerMarginTop;
+  footerMarginTop = Math.min(Math.max(footerMarginTop, 0), 60);
+
+  let footerMarginBottom = parseFloat(document.getElementById('f-footer-margin-bottom').value);
+  if (isNaN(footerMarginBottom)) footerMarginBottom = DEFAULTS.footerMarginBottom;
+  footerMarginBottom = Math.min(Math.max(footerMarginBottom, 0), 60);
+
+  let descSize = parseFloat(document.getElementById('f-desc-size').value);
+  if (isNaN(descSize)) descSize = DEFAULTS.descSize;
+  descSize = Math.min(Math.max(descSize, 12), 40);
+
+  let companySize = parseFloat(document.getElementById('f-company-size').value);
+  if (isNaN(companySize)) companySize = DEFAULTS.companySize;
+  companySize = Math.min(Math.max(companySize, 8), 56);
+
+  let companyMarginTop = parseFloat(document.getElementById('f-company-margin-top').value);
+  if (isNaN(companyMarginTop)) companyMarginTop = DEFAULTS.companyMarginTop;
+  companyMarginTop = Math.min(Math.max(companyMarginTop, 0), 60);
+
+  const companyColor = document.getElementById('f-company-color').value.trim() || DEFAULTS.companyColor;
+
+  const accentInput = document.getElementById('f-accent').value.trim();
+  const accentColor = /^#[0-9a-fA-F]{6}$/.test(accentInput) ? accentInput : DEFAULTS.accent;
+
+  const liveDotInput = document.getElementById('f-live-dot-color').value.trim();
+  const liveDotColor = /^#[0-9a-fA-F]{6}$/.test(liveDotInput) ? liveDotInput : DEFAULTS.liveDotColor;
+
+  const costColorInput = document.getElementById('f-cost-color').value.trim();
+  const costBoxColor = /^#[0-9a-fA-F]{6}$/.test(costColorInput) ? costColorInput : DEFAULTS.costBoxColor;
+
+  return {
+    costEnabled: document.getElementById('f-cost-enabled').checked,
+    live: document.getElementById('f-live').value || DEFAULTS.live,
+    title: document.getElementById('f-title').value || DEFAULTS.title,
+    desc: document.getElementById('f-desc').value || DEFAULTS.desc,
+    descIcon: document.getElementById('f-desc-icon').value,
+    numEnabled: document.getElementById('f-num-enabled').checked,
+    timerMode: document.getElementById('f-timer-midnight').checked ? 'midnight' : 'fixed',
+    numFrom: document.getElementById('f-num-from').value.trim(),
+    numTo: document.getElementById('f-num-to').value.trim(),
+    startMin: clampInt('f-start-min', DEFAULTS.startMin, 0, 99),
+    startSec: clampInt('f-start-sec', DEFAULTS.startSec, 0, 59),
+    startCs: clampInt('f-start-cs', DEFAULTS.startCs, 0, 99),
+    switchMin: clampInt('f-switch-min', DEFAULTS.switchMin, 0, 99),
+    switchSec: clampInt('f-switch-sec', DEFAULTS.switchSec, 0, 59),
+    descSize: descSize,
+    descMotion: document.getElementById('f-desc-motion').value,
+    numStyle: document.getElementById('f-num-style').value,
+    numColor: document.getElementById('f-num-color').value || DEFAULTS.numColor,
+    col1: document.getElementById('f-col1').value || (CATEGORY_PRESETS[category] || CATEGORY_PRESETS.nexen).col1,
+    col2: document.getElementById('f-col2').value || (CATEGORY_PRESETS[category] || CATEGORY_PRESETS.nexen).col2,
+    col3: document.getElementById('f-col3').value || (CATEGORY_PRESETS[category] || CATEGORY_PRESETS.nexen).col3,
+    col4: document.getElementById('f-col4').value || CATEGORY_PRESETS.apply.col4,
+    done: document.getElementById('f-done').value || CATEGORY_PRESETS.apply.done,
+    pend: document.getElementById('f-pend').value || CATEGORY_PRESETS.apply.pend,
+    yearMin: yearMin,
+    yearMax: yearMax,
+    category: category,
+    bgMode: document.getElementById('f-bg-dark').checked ? 'dark' : 'light',
+    accentColor: accentColor,
+    costBoxColor: costBoxColor,
+    liveDotColor: liveDotColor,
+    footer: document.getElementById('f-footer').value || DEFAULTS.footer,
+    footerSize: footerSize,
+    footerMarginTop: footerMarginTop,
+    footerMarginBottom: footerMarginBottom,
+    company: document.getElementById('f-company').value,
+    companySize: companySize,
+    companyMarginTop: companyMarginTop,
+    companyColor: companyColor
+  };
+}
+
+function render() {
+  const html = buildHTML(getValues());
+  const preview = document.getElementById('preview');
+  preview.srcdoc = html;
+  document.getElementById('code-output').value = html;
+  fitPreviewHeight(preview);
+}
+
+function fitPreviewHeight(preview) {
+  function resize() {
+    try {
+      const doc = preview.contentDocument;
+      if (!doc) return;
+      const h = Math.max(doc.documentElement.scrollHeight, doc.body ? doc.body.scrollHeight : 0);
+      if (h) preview.style.height = h + 'px';
+    } catch (e) { /* ignore */ }
+  }
+  preview.onload = () => {
+    resize();
+    try {
+      const doc = preview.contentDocument;
+      if (doc && doc.fonts && doc.fonts.ready) {
+        doc.fonts.ready.then(() => setTimeout(resize, 60));
+      }
+      // 카드 실제 높이가 바뀔 때마다(폰트 로드 후 줄 높이 계산 등) 계속 감지해서 재조정
+      if (doc && doc.body && window.ResizeObserver) {
+        let rafId = null;
+        const ro = new ResizeObserver(() => {
+          // 콜백을 다음 프레임으로 미뤄서 'ResizeObserver loop' 경고 방지
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(resize);
+        });
+        ro.observe(doc.body);
+      }
+    } catch (e) { /* ignore */ }
+    // 폴백: 비동기 계산이 늦게 끝나는 경우를 대비해 몇 차례 더 보정
+    [100, 300, 700].forEach(t => setTimeout(resize, t));
+  };
+}
+
+// 슬라이더(range)와 숫자 입력(number)을 서로 동기화
+function linkSizeControl(rangeId, numberId) {
+  const rangeEl = document.getElementById(rangeId);
+  const numberEl = document.getElementById(numberId);
+  rangeEl.addEventListener('input', () => {
+    numberEl.value = rangeEl.value;
+    render();
+  });
+  numberEl.addEventListener('input', () => {
+    if (numberEl.value !== '') rangeEl.value = numberEl.value;
+    render();
+  });
+}
+linkSizeControl('f-desc-size-range', 'f-desc-size');
+linkSizeControl('f-footer-size-range', 'f-footer-size');
+linkSizeControl('f-company-size-range', 'f-company-size');
+
+// 카테고리 전환: 표 컬럼 구성 + 명단 데이터 + 관련 필드 표시/숨김을 한 번에 전환
+function applyCategory(cat) {
+  const preset = CATEGORY_PRESETS[cat] || CATEGORY_PRESETS.nexen;
+  const isApply = cat === 'apply';
+
+  document.getElementById('field-col4').style.display = isApply ? '' : 'none';
+  document.getElementById('field-year').style.display = isApply ? '' : 'none';
+  document.getElementById('divider-status').style.display = isApply ? '' : 'none';
+  document.getElementById('label-status').style.display = isApply ? '' : 'none';
+  document.getElementById('field-status').style.display = isApply ? '' : 'none';
+  document.getElementById('note-apply').style.display = isApply ? '' : 'none';
+  document.getElementById('note-nexen').style.display = isApply ? 'none' : '';
+
+  document.getElementById('f-col1').value = preset.col1;
+  document.getElementById('f-col2').value = preset.col2;
+  document.getElementById('f-col3').value = preset.col3;
+  if (isApply) {
+    document.getElementById('f-col4').value = preset.col4;
+    document.getElementById('f-done').value = preset.done;
+    document.getElementById('f-pend').value = preset.pend;
+    document.getElementById('f-year-min').value = preset.yearMin;
+    document.getElementById('f-year-max').value = preset.yearMax;
+  }
+  render();
+}
+
+document.getElementById('f-category').addEventListener('change', () => {
+  applyCategory(document.getElementById('f-category').value);
+});
+
+// 컬러 피커 ↔ 헥스코드 입력창 동기화 (render()는 아래 공통 input 리스너가 처리)
+document.getElementById('f-accent-picker').addEventListener('input', () => {
+  document.getElementById('f-accent').value = document.getElementById('f-accent-picker').value;
+});
+document.getElementById('f-accent').addEventListener('input', () => {
+  const val = document.getElementById('f-accent').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    document.getElementById('f-accent-picker').value = val;
+  }
+});
+
+// 예상 비용 박스 색상 피커 ↔ 헥스코드 입력창 동기화
+document.getElementById('f-cost-color-picker').addEventListener('input', () => {
+  document.getElementById('f-cost-color').value = document.getElementById('f-cost-color-picker').value;
+});
+document.getElementById('f-cost-color').addEventListener('input', () => {
+  const val = document.getElementById('f-cost-color').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    document.getElementById('f-cost-color-picker').value = val;
+  }
+});
+
+// 예상 비용 박스 색상 스와치 클릭 시 즉시 반영
+document.querySelectorAll('.cost-color-swatch').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const color = btn.getAttribute('data-color');
+    document.getElementById('f-cost-color').value = color;
+    document.getElementById('f-cost-color-picker').value = color;
+    render();
+  });
+});
+
+// 숫자 강조 색상 피커 ↔ 헥스코드 입력창 동기화
+document.getElementById('f-num-color-picker').addEventListener('input', () => {
+  document.getElementById('f-num-color').value = document.getElementById('f-num-color-picker').value;
+});
+document.getElementById('f-num-color').addEventListener('input', () => {
+  const val = document.getElementById('f-num-color').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    document.getElementById('f-num-color-picker').value = val;
+  }
+});
+
+// 숫자 강조 색상 스와치 클릭 시 즉시 반영
+document.querySelectorAll('.num-color-swatch').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const color = btn.getAttribute('data-color');
+    document.getElementById('f-num-color').value = color;
+    document.getElementById('f-num-color-picker').value = color;
+    render();
+  });
+});
+
+// 포인트 컬러 스와치 클릭 시 즉시 반영
+document.querySelectorAll('.swatch-btn:not(.live-dot-swatch):not(.num-color-swatch):not(.cost-color-swatch)').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const color = btn.getAttribute('data-color');
+    document.getElementById('f-accent').value = color;
+    document.getElementById('f-accent-picker').value = color;
+    render();
+  });
+});
+
+// 랜딩페이지 인기 컬러 8종 클릭 시 포인트 컬러에 즉시 반영
+document.querySelectorAll('.landing-swatch-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const color = btn.getAttribute('data-color');
+    document.getElementById('f-accent').value = color;
+    document.getElementById('f-accent-picker').value = color;
+    document.querySelectorAll('.landing-swatch-btn').forEach(b => b.style.boxShadow = 'none');
+    btn.style.boxShadow = '0 0 0 2px ' + color;
+    render();
+  });
+});
+
+// LIVE 깜빡이 동그라미 컬러 피커 ↔ 헥스코드 동기화 및 스와치
+document.getElementById('f-live-dot-picker').addEventListener('input', () => {
+  document.getElementById('f-live-dot-color').value = document.getElementById('f-live-dot-picker').value;
+});
+document.getElementById('f-live-dot-color').addEventListener('input', () => {
+  const val = document.getElementById('f-live-dot-color').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    document.getElementById('f-live-dot-picker').value = val;
+  }
+});
+document.querySelectorAll('.live-dot-swatch').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const color = btn.getAttribute('data-color');
+    document.getElementById('f-live-dot-color').value = color;
+    document.getElementById('f-live-dot-picker').value = color;
+    render();
+  });
+});
+
+document.querySelectorAll('.panel input:not(.size-control input), .panel textarea').forEach(el => {
+  el.addEventListener('input', render);
+});
+
+document.querySelectorAll('.panel select:not(#f-category)').forEach(el => {
+  el.addEventListener('change', render);
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  const cat = document.getElementById('f-category').value;
+  document.getElementById('f-cost-enabled').checked = DEFAULTS.costEnabled;
+  document.getElementById('f-live').value = DEFAULTS.live;
+  document.getElementById('f-live-dot-color').value = DEFAULTS.liveDotColor;
+  document.getElementById('f-live-dot-picker').value = DEFAULTS.liveDotColor;
+  document.getElementById('f-title').value = DEFAULTS.title;
+  document.getElementById('f-desc').value = DEFAULTS.desc;
+  document.getElementById('f-desc-icon').value = DEFAULTS.descIcon;
+  document.getElementById('f-desc-motion').value = DEFAULTS.descMotion;
+  document.getElementById('f-num-style').value = DEFAULTS.numStyle;
+  document.getElementById('f-num-color').value = DEFAULTS.numColor;
+  document.getElementById('f-num-color-picker').value = DEFAULTS.numColor;
+  document.getElementById('f-num-enabled').checked = DEFAULTS.numEnabled;
+  document.getElementById('f-num-from').value = DEFAULTS.numFrom;
+  document.getElementById('f-num-to').value = DEFAULTS.numTo;
+  document.getElementById('f-timer-fixed').checked = true;
+  document.getElementById('f-timer-midnight').checked = false;
+  document.getElementById('f-start-min').value = DEFAULTS.startMin;
+  document.getElementById('f-start-sec').value = DEFAULTS.startSec;
+  document.getElementById('f-start-cs').value = DEFAULTS.startCs;
+  document.getElementById('f-switch-min').value = DEFAULTS.switchMin;
+  document.getElementById('f-switch-sec').value = DEFAULTS.switchSec;
+  document.getElementById('f-desc-size').value = DEFAULTS.descSize;
+  document.getElementById('f-desc-size-range').value = DEFAULTS.descSize;
+  document.getElementById('f-bg-light').checked = (DEFAULTS.bgMode === 'light');
+  document.getElementById('f-bg-dark').checked = (DEFAULTS.bgMode === 'dark');
+  document.getElementById('f-accent').value = DEFAULTS.accent;
+  document.getElementById('f-accent-picker').value = DEFAULTS.accent;
+  document.getElementById('f-cost-color').value = DEFAULTS.costBoxColor;
+  document.getElementById('f-cost-color-picker').value = DEFAULTS.costBoxColor;
+  document.getElementById('f-footer').value = DEFAULTS.footer;
+  document.getElementById('f-footer-size').value = DEFAULTS.footerSize;
+  document.getElementById('f-footer-size-range').value = DEFAULTS.footerSize;
+  document.getElementById('f-footer-margin-top').value = DEFAULTS.footerMarginTop;
+  document.getElementById('f-footer-margin-bottom').value = DEFAULTS.footerMarginBottom;
+  document.getElementById('f-company').value = DEFAULTS.company;
+  document.getElementById('f-company-size').value = DEFAULTS.companySize;
+  document.getElementById('f-company-size-range').value = DEFAULTS.companySize;
+  document.getElementById('f-company-margin-top').value = DEFAULTS.companyMarginTop;
+  document.getElementById('f-company-color').value = DEFAULTS.companyColor;
+  applyCategory(cat);
+});
+
+document.querySelectorAll('.desc-preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('f-desc-icon').value = btn.getAttribute('data-icon');
+    document.getElementById('f-desc').value = btn.getAttribute('data-text');
+    render();
+  });
+});
+
+function copyWidgetCode() {
+  const output = document.getElementById('code-output');
+  output.select();
+  const showStatus = () => {
+    ['copy-status', 'copy-status-quick'].forEach(id => {
+      const status = document.getElementById(id);
+      if (!status) return;
+      status.textContent = '복사되었습니다!';
+      setTimeout(() => status.textContent = '', 1800);
+    });
+  };
+  navigator.clipboard.writeText(output.value).then(showStatus).catch(() => {
+    document.execCommand('copy');
+    showStatus();
+  });
+}
+
+document.getElementById('btn-copy').addEventListener('click', copyWidgetCode);
+document.getElementById('btn-copy-quick').addEventListener('click', copyWidgetCode);
+
+applyCategory(document.getElementById('f-category').value);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,2839 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>접수 마감 기한 카드 생성기</title>
+<style>
+  :root{
+    --bg: #0b0b0e;
+    --panel: #16161b;
+    --panel-2: #1d1d24;
+    --border: rgba(255,255,255,0.08);
+    --text: #f2f2f4;
+    --sub: #9a9aa5;
+    --accent: #ff3b3b;
+    --accent-2: #6c6cff;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;width:100%;overflow-x:auto;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+    min-height:100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header{
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+    width: 100%;
+  }
+  @media (max-width: 1200px) {
+    header{
+      min-width: auto;
+    }
+  }
+  header h1{
+    font-size: 18px;
+    margin:0;
+    font-weight:800;
+    letter-spacing:-0.2px;
+  }
+  header p{
+    margin:4px 0 0;
+    font-size:12.5px;
+    color: var(--sub);
+  }
+  .reset-btn{
+    background: transparent;
+    color: var(--sub);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    transition: all .15s;
+    flex: 0 0 auto;
+  }
+  .reset-btn:hover{
+    color: var(--text);
+    border-color: rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.04);
+  }
+  .reset-btn:active{
+    transform: scale(0.96);
+  }
+  .reset-btn svg{ width:14px; height:14px; }
+  .layout{
+    display:grid;
+    grid-template-columns: 380px 1fr;
+    gap:0;
+    height: calc(100vh - 76px);
+    width: 100%;
+  }
+  @media (max-width: 1000px) {
+    .layout{
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+  }
+
+  /* ---------- 좌측 설정 패널 ---------- */
+  .panel{
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    overflow-y:auto;
+    max-height: calc(100vh - 76px);
+    min-height: 0;
+    flex-shrink: 0;
+    width: 380px;
+  }
+  @media (max-width: 1000px) {
+    .panel{
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      max-height: auto;
+      padding: 16px;
+    }
+  }
+
+  .group{
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 14px 16px;
+    margin-bottom: 14px;
+  }
+  .group-title{
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--sub);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0 0 12px;
+  }
+  .field{ margin-bottom: 10px; }
+  .field:last-child{ margin-bottom:0; }
+  .field label{
+    display:block;
+    font-size: 12.5px;
+    color: #c8c8d0;
+    margin-bottom: 5px;
+    font-weight:600;
+  }
+  .field input[type="text"],
+  .field input[type="number"],
+  .field input[type="date"],
+  .field select{
+    width:100%;
+    background:#0f0f13;
+    border:1px solid var(--border);
+    border-radius:8px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 9px 10px;
+    font-family: inherit;
+  }
+  .field input:focus, .field select:focus{
+    outline:none;
+    border-color: var(--accent-2);
+  }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .color-row{ display:flex; align-items:center; gap:8px; }
+  .color-row input[type="color"]{
+    width:38px; height:34px; padding:0; border:1px solid var(--border);
+    border-radius:8px; background:#0f0f13; cursor:pointer;
+  }
+  .color-row input[type="text"]{ flex:1; }
+
+  .radio-set{ display:flex; gap:14px; margin-bottom:4px; }
+  .radio-set label{
+    display:flex; align-items:center; gap:6px;
+    font-size:12.5px; color:#c8c8d0; font-weight:600; cursor:pointer;
+  }
+  .radio-set input{ accent-color: var(--accent-2); }
+
+  .hint{ font-size:11.5px; color:#6d6d78; margin-top:6px; line-height:1.5; }
+
+  #masterScaleGroup{
+    border-color: rgba(108,108,255,0.32);
+    background: linear-gradient(180deg, rgba(108,108,255,0.12), var(--panel-2));
+  }
+  .master-quick{ display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .ms-chip{
+    background:#0f0f13; color:#c8c8d0; border:1px solid var(--border);
+    border-radius:999px; padding:5px 11px; font-size:11.5px; font-weight:700;
+    cursor:pointer; font-family:inherit;
+  }
+  .ms-chip:hover{ border-color: var(--accent-2); color: var(--text); }
+  .ms-chip.active{ border-color: var(--accent-2); color:#fff; background: rgba(108,108,255,0.22); }
+
+  .swatch-row{ display:flex; gap:6px; margin-top:7px; flex-wrap:wrap; }
+  .theme-preset-row{ display:flex; gap:8px; }
+  .theme-preset-btn{
+    flex:1;
+    padding:9px 10px;
+    border-radius:9px;
+    border:1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+    color: var(--text);
+    font-size:12.5px;
+    font-weight:700;
+    cursor:pointer;
+    transition: all .15s;
+  }
+  .theme-preset-btn:hover{
+    border-color: rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.06);
+  }
+  .theme-preset-btn:active{ transform: scale(0.97); }
+  .theme-preset-btn.active{
+    border-color: var(--accent-2);
+    background: var(--accent-2);
+    color:#fff;
+  }
+  .swatch{
+    width:24px; height:24px;
+    border-radius:7px;
+    border:1px solid rgba(255,255,255,0.18);
+    cursor:pointer;
+    padding:0;
+    flex:0 0 auto;
+    transition: transform .1s;
+  }
+  .swatch:hover{ transform: scale(1.12); }
+  .swatch:active{ transform: scale(0.94); }
+
+  .range-row{
+    display:flex; align-items:center; gap:10px;
+  }
+  .range-row input[type="range"]{
+    flex:1;
+    accent-color: var(--accent-2);
+  }
+  .range-val{
+    font-size:12.5px;
+    font-weight:700;
+    color: var(--text);
+    min-width:42px;
+    text-align:right;
+  }
+
+  /* ---------- 우측 미리보기 ---------- */
+  .right{
+    padding: 22px 24px;
+    overflow-y:auto;
+    max-height: calc(100vh - 76px);
+    min-height: 0;
+    display:flex;
+    flex-direction:column;
+    flex: 1;
+    min-width: 500px;
+  }
+  @media (max-width: 1000px) {
+    .right{
+      min-width: auto;
+      max-height: auto;
+      padding: 16px 16px;
+    }
+  }
+  .preview-label{
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--sub);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0 0 12px;
+  }
+  .preview-wrap{
+    background: repeating-conic-gradient(#141418 0% 25%, #17171c 0% 50%) 50% / 22px 22px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 40px 20px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex:1;
+  }
+  #previewMount{ width:100%; max-width:520px; }
+
+  .preview-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin: 0 0 12px;
+  }
+  .preview-head .preview-label{ margin:0; }
+  .preview-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .icon-btn{
+    width:32px;
+    height:32px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: transparent;
+    color: var(--sub);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    padding:0;
+    transition: all .15s;
+    flex: 0 0 auto;
+  }
+  .icon-btn svg{ width:15px; height:15px; }
+  .icon-btn:hover{
+    color: var(--text);
+    border-color: rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.04);
+  }
+  .icon-btn:active{ transform: scale(0.92); }
+  .icon-btn.copied{
+    color: #2fbf71;
+    border-color: #2fbf71;
+  }
+  .copy-accent{
+    background: var(--accent-2);
+    border-color: var(--accent-2);
+    color:#fff;
+  }
+  .copy-accent:hover{
+    background: var(--accent-2);
+    opacity:0.85;
+    color:#fff;
+    border-color: var(--accent-2);
+  }
+  .copy-accent.copied{
+    background:#2fbf71;
+    border-color:#2fbf71;
+    color:#fff;
+  }
+  .visually-hidden-field{
+    position:fixed;
+    top:-9999px;
+    left:-9999px;
+    width:1px;
+    height:1px;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  /* ---------- 하단 전체폭 코드 영역 ---------- */
+  .code-section{
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    padding: 20px 24px 26px;
+    width: 100%;
+    min-width: 900px;
+  }
+  .code-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin: 0 0 10px;
+  }
+  .code-head h2{ font-size:14px; margin:0; font-weight:800; }
+  .copy-btn{
+    background: var(--accent-2);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:9px 16px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    transition: opacity .15s;
+  }
+  .copy-btn:hover{ opacity:0.85; }
+  .copy-btn.copied{ background:#2fbf71; }
+
+  textarea#outputCode{
+    width:100%;
+    height: 260px;
+    background:#0c0c10;
+    color:#c7f9cc;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px;
+    font-family: var(--mono);
+    font-size:12px;
+    line-height:1.6;
+    resize:vertical;
+    white-space:pre;
+  }
+
+  .footnote{
+    font-size:11.5px; color:#6d6d78; margin-top:10px; line-height:1.6;
+  }
+
+  /* ---------- 게이지 스타일 탭 선택기 ---------- */
+  .gauge-style-tabs{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:8px;
+    margin-top:6px;
+  }
+  .gs-tab{
+    background:#0f0f13;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 8px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    transition: all .15s;
+  }
+  .gs-tab:hover{ border-color: rgba(255,255,255,0.28); }
+  .gs-tab.active{
+    border-color: var(--accent-2);
+    background: rgba(108,108,255,0.08);
+  }
+  .gs-tab-preview{ width:100%; }
+  .gs-tab-track{
+    display:block;
+    width:100%;
+    height:9px;
+    border-radius:999px;
+    background: rgba(255,255,255,0.14);
+    overflow:hidden;
+    position:relative;
+  }
+  .gs-tab-fill{
+    position:relative;
+    display:block;
+    height:100%;
+    width:74%;
+    border-radius:999px;
+    background:#ff3b3b;
+    overflow:hidden;
+  }
+  .gs-tab-label{
+    font-size:11px;
+    font-weight:700;
+    color:#c8c8d0;
+    text-align:center;
+  }
+  .gs-tab.active .gs-tab-label{ color:#fff; }
+
+  /* ---------- 배지 모양 탭 선택기 ---------- */
+  .badge-style-tabs{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:8px;
+    margin-top:6px;
+  }
+  .bs-tab{
+    background:#0f0f13;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 8px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    transition: all .15s;
+  }
+  .bs-tab:hover{ border-color: rgba(255,255,255,0.28); }
+  .bs-tab.active{
+    border-color: var(--accent-2);
+    background: rgba(108,108,255,0.08);
+  }
+  .bs-tab-preview{ width:100%; display:flex; justify-content:center; align-items:center; height:26px; }
+  .bs-shape{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:#ff3b3b;
+    color:#fff;
+    font-size:10px;
+    font-weight:900;
+    line-height:1;
+    padding:6px 11px;
+    white-space:nowrap;
+  }
+  .bs-shape.bs-rounded{ border-radius:6px; }
+  .bs-shape.bs-pill{ border-radius:999px; padding:6px 14px; }
+  .bs-shape.bs-sharp{ border-radius:0; }
+  .bs-shape.bs-ribbon{
+    border-radius:0;
+    padding:6px 17px;
+    clip-path: polygon(0 0, 100% 0, 91% 50%, 100% 100%, 0 100%, 9% 50%);
+  }
+  .bs-shape.bs-hexagon{
+    border-radius:0;
+    padding:6px 19px;
+    clip-path: polygon(7% 0, 93% 0, 100% 50%, 93% 100%, 7% 100%, 0 50%);
+  }
+  .bs-shape.bs-tag{
+    border-radius:0;
+    padding:6px 16px 6px 11px;
+    clip-path: polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%);
+  }
+  .bs-tab-label{
+    font-size:11px;
+    font-weight:700;
+    color:#c8c8d0;
+    text-align:center;
+  }
+  .bs-tab.active .bs-tab-label{ color:#fff; }
+
+  .gs-style-stripe .gs-tab-fill{
+    animation: gsStripePulse 1.3s infinite ease-in-out;
+  }
+  .gs-style-stripe .gs-tab-fill::after{
+    content:"";
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,0.35) 0px, rgba(255,255,255,0.35) 4px, transparent 4px, transparent 8px);
+    background-size:22px 100%;
+    animation: gsStripeMove .9s linear infinite;
+  }
+  @keyframes gsStripePulse{ 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.3);} }
+  @keyframes gsStripeMove{ 0%{background-position:0 0;} 100%{background-position:-22px 0;} }
+
+  .gs-style-neon .gs-tab-fill{
+    background: linear-gradient(90deg, #ff3b3b, #ff9a9a);
+    animation: gsNeon 1.4s infinite ease-in-out;
+  }
+  .gs-style-neon .gs-tab-track{ animation: gsNeonRing 1.4s infinite ease-in-out; }
+  @keyframes gsNeon{ 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.35);} }
+  @keyframes gsNeonRing{ 0%,100%{box-shadow:0 0 0 0 #ff3b3b55;} 50%{box-shadow:0 0 10px 2px #ff3b3baa;} }
+
+  .gs-style-shine .gs-tab-fill::after{
+    content:"";
+    position:absolute; top:0; left:-40%; width:30%; height:100%;
+    background: linear-gradient(115deg, transparent, rgba(255,255,255,0.85), transparent);
+    animation: gsShine 1.5s infinite ease-in-out;
+  }
+  @keyframes gsShine{ 0%{left:-40%;} 60%,100%{left:130%;} }
+
+  .gs-style-heartbeat .gs-tab-fill{
+    transform-origin:left center;
+    animation: gsHeartbeat 1.1s infinite ease-in-out;
+  }
+  @keyframes gsHeartbeat{
+    0%,28%,100%{ transform:scaleY(1); }
+    14%{ transform:scaleY(1.5); }
+    42%{ transform:scaleY(1.25); }
+  }
+
+  .gs-style-segment .gs-tab-fill{
+    background: repeating-linear-gradient(90deg, #ff3b3b 0px, #ff3b3b 7px, #0f0f13 7px, #0f0f13 9px);
+    animation: gsSegment 1.3s infinite ease-in-out;
+  }
+  @keyframes gsSegment{ 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.4);} }
+</style>
+</head>
+
+<body>
+
+<header>
+  <div>
+    <h1>⏳ 접수 마감 기한 카드 생성기</h1>
+    <p>티스토리용 카드 위젯 · 텍스트/날짜/색상 커스터마이징 · 다른 위젯과 충돌 방지 코드 자동 생성</p>
+  </div>
+  <button type="button" class="reset-btn" id="resetBtn" title="모든 설정을 기본값으로 되돌립니다">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+    초기화
+  </button>
+</header>
+
+<div class="layout">
+  <!-- 좌측 설정 -->
+  <div class="panel">
+
+    <div class="group" id="viewerDropGroup" style="border-color:#f5c842; background:rgba(245,200,66,0.08);">
+      <p class="group-title" style="color:#f5c842;">⏰ 타이머 특정 시점에 잔여 인원 자동 전환</p>
+      <div class="field" style="margin-bottom:0;">
+        <label style="display:flex; align-items:flex-start; gap:6px; cursor:pointer; margin:0;">
+          <input type="checkbox" id="f_viewerDropEnable" checked style="accent-color:#f5c842; margin-top:2px;">
+          <span>타이머가 설정한 시점에 도달하면 잔여 인원 문구를 지정한 숫자로 자동 전환</span>
+        </label>
+        <div class="hint">타이머가 아래 설정한 시점(기본 9분 20초 남았을 때)에 도달하면, "잔여 인원 카피" 안의 숫자가 지정한 인원수(기본 2명)로 바뀌고, 상단 강조 문구의 [[ ]] 안 숫자(있을 경우)도 지정한 값(기본 48)으로 함께 바뀝니다. 이후에는 그 숫자들로 계속 유지됩니다. (임계값 이하이면 긴급 효과도 함께 발동됩니다) 이 기능은 내부적으로 자체 시계를 사용하므로 <b>'타이머 표시'를 꺼두어도 정상 동작</b>하며, 이때는 위에서 설정한 "시작 - 분/초/1·100초" 값을 기준 주기로 사용합니다.</div>
+      </div>
+      <div class="row2" style="grid-template-columns:1fr 1fr; margin-top:10px;">
+        <div class="field" style="margin-bottom:0;">
+          <label>전환 시점(분)</label>
+          <input type="number" id="f_viewerDropMin" value="9" min="0" max="99">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>전환 시점(초)</label>
+          <input type="number" id="f_viewerDropSec" value="20" min="0" max="59">
+        </div>
+      </div>
+      <div class="row2" style="grid-template-columns:1fr 1fr; margin-top:8px;">
+        <div class="field" style="margin-bottom:0;">
+          <label>전환 후 잔여 인원수</label>
+          <input type="number" id="f_viewerDropCount" value="2" min="0">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>전환 후 현재 인원수 (강조 문구 [[ ]] 숫자)</label>
+          <input type="number" id="f_viewerDropCurrent" value="48" min="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="group" id="masterScaleGroup">
+      <p class="group-title">전체 텍스트 크기</p>
+      <div class="field" style="margin-bottom:0;">
+        <label>🔠 전체 크기 일괄 조절 (모든 텍스트 한 번에)</label>
+        <div class="range-row">
+          <input type="range" id="f_masterScale" min="50" max="200" step="1" value="123">
+          <span class="range-val" id="masterScaleVal">123%</span>
+        </div>
+        <div class="hint">타이틀·날짜·배지·강조 문구·타이머·잔여 인원 등 <b>카드 안의 모든 글자 크기를 한 번에</b> 키우고 줄입니다. (아래 "폰트 &amp; 텍스트 크기"의 텍스트 크기 슬라이더와 연동되며, 각 요소별 크기(%)는 이 값 위에 곱해집니다.)</div>
+      </div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">텍스트</p>
+      <div class="field">
+        <label>상단 타이틀</label>
+        <input type="text" id="f_title" value="접수 마감 기한">
+      </div>
+      <div class="field">
+        <label>배지 텍스트</label>
+        <input type="text" id="f_badge" value="곧 선착순 종료">
+      </div>
+      <div class="field">
+        <label>강조 문구</label>
+        <input type="text" id="f_highlight" value="현재 [[47]] / 50명 신청 완료">
+      </div>
+      <div class="field">
+        <label>하단 설명 (줄 1)</label>
+        <input type="text" id="f_line1" value="" placeholder="예: 마감 직전 딱! [[3자리]] 남았습니다!">
+      </div>
+      <div class="field">
+        <label>하단 설명 (줄 2)</label>
+        <input type="text" id="f_line2" value="" placeholder="예: 마감 직전 딱! [[3자리]] 남았습니다!">
+      </div>
+      <div class="hint">💡 <b>[[강조할 텍스트]]</b> 형태로 감싸면 해당 부분이 노란색으로 강조됩니다. (강조 문구 · 하단 설명 줄1/줄2 모두 적용)</div>
+
+      <div class="field" style="margin-top:14px; padding-top:14px; border-top:1px dashed var(--border);">
+        <label>상단 타이틀 — 크기 (%) / 위치(상하, px)</label>
+        <div class="row2">
+          <div class="range-row">
+            <input type="range" id="f_titleScale" min="50" max="200" value="100" step="5">
+            <span class="range-val" id="titleScaleVal">100%</span>
+          </div>
+          <div class="range-row">
+            <input type="range" id="f_titlePosY" min="-30" max="30" value="0" step="1">
+            <span class="range-val" id="titlePosYVal">0px</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>하단 설명 줄1 — 크기 (%) / 위치(상하, px)</label>
+        <div class="row2">
+          <div class="range-row">
+            <input type="range" id="f_line1Scale" min="50" max="200" value="100" step="5">
+            <span class="range-val" id="line1ScaleVal">100%</span>
+          </div>
+          <div class="range-row">
+            <input type="range" id="f_line1PosY" min="-30" max="30" value="0" step="1">
+            <span class="range-val" id="line1PosYVal">0px</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>하단 설명 줄2 — 크기 (%) / 위치(상하, px)</label>
+        <div class="row2">
+          <div class="range-row">
+            <input type="range" id="f_line2Scale" min="50" max="200" value="100" step="5">
+            <span class="range-val" id="line2ScaleVal">100%</span>
+          </div>
+          <div class="range-row">
+            <input type="range" id="f_line2PosY" min="-30" max="30" value="0" step="1">
+            <span class="range-val" id="line2PosYVal">0px</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">모집 현황 (게이지)</p>
+      <div class="field">
+        <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
+            <input type="checkbox" id="f_gaugeEnable" checked style="accent-color:var(--accent-2);">게이지 표시
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
+            <input type="checkbox" id="f_timerEnable" style="accent-color:var(--accent-2);">타이머 표시
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
+            <input type="checkbox" id="f_deadlineEnable" style="accent-color:var(--accent-2);">마감 기한 표시
+          </label>
+        </div>
+        <div class="hint">💡 마감 기한 표시를 끄면 상단 제목("접수 마감 기한")과 날짜("9/5(토)~9/8(화)까지") 영역이 카드에서 사라집니다.</div>
+      </div>
+      <div class="row2" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="field">
+          <label>시작 - 분</label>
+          <input type="number" id="f_timerMinutes" value="10" min="0" max="99">
+        </div>
+        <div class="field">
+          <label>시작 - 초</label>
+          <input type="number" id="f_timerSeconds" value="1" min="0" max="59">
+        </div>
+        <div class="field">
+          <label>시작 - 1/100초</label>
+          <input type="number" id="f_timerCentiseconds" value="32" min="0" max="99">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>현재 인원</label>
+          <input type="number" id="f_gaugeCurrent" value="47" min="0">
+        </div>
+        <div class="field">
+          <label>정원</label>
+          <input type="number" id="f_gaugeMax" value="50" min="1">
+        </div>
+      </div>
+      <div class="field">
+        <label>잔여 인원 카피</label>
+        <input type="text" id="f_remainCopy" value="마지막 {count}명 남았습니다" placeholder="예: 마감 직전! {count}자리 남았어요">
+        <div class="hint">💡 <b>{count}</b> 자리에 남은 인원 숫자가 자동으로 들어갑니다. (게이지 표시를 꺼도 이 문구는 노출됩니다)</div>
+      </div>
+      <div class="field" style="background:rgba(255,59,59,0.07); border:1px solid rgba(255,59,59,0.28); border-radius:10px; padding:12px;">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin-bottom:8px;">
+          <input type="checkbox" id="f_urgentEnable" checked style="accent-color:var(--accent);">
+          <span>🔥 잔여 인원 임계값 도달 시 긴급 효과 자동 적용 (전환율↑)</span>
+        </label>
+        <div class="field" style="margin-bottom:0;">
+          <label>임계값 (이하일 때 발동)</label>
+          <input type="number" id="f_urgentThreshold" value="3" min="1">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>모션 스타일</label>
+          <select id="f_urgentMotion">
+            <option value="shake">좌우 흔들림</option>
+            <option value="pulse">확대·축소 펄스</option>
+            <option value="heartbeat">심장박동형 펄스</option>
+            <option value="glow" selected>레드 글로우 펄스</option>
+            <option value="blink">깜빡임</option>
+            <option value="bounce">통통 튕김</option>
+            <option value="colorpulse">숫자 컬러 펄스</option>
+          </select>
+        </div>
+        <div class="hint">💡 잔여 인원이 임계값 이하로 떨어지면 문구 줄에 선택한 모션 효과가 자동으로 켜집니다. (현재 인원/정원 값에 따라 실시간 반영)</div>
+      </div>
+      <div class="field">
+        <label>게이지 스타일 (모션)</label>
+        <input type="hidden" id="f_gaugeStyle" value="segment">
+        <div class="gauge-style-tabs" id="gaugeStyleTabs">
+          <button type="button" class="gs-tab" data-style="stripe">
+            <span class="gs-tab-preview gs-style-stripe"><span class="gs-tab-track"><span class="gs-tab-fill"></span></span></span>
+            <span class="gs-tab-label">스트라이프 펄스</span>
+          </button>
+          <button type="button" class="gs-tab" data-style="neon">
+            <span class="gs-tab-preview gs-style-neon"><span class="gs-tab-track"><span class="gs-tab-fill"></span></span></span>
+            <span class="gs-tab-label">네온 글로우</span>
+          </button>
+          <button type="button" class="gs-tab" data-style="shine">
+            <span class="gs-tab-preview gs-style-shine"><span class="gs-tab-track"><span class="gs-tab-fill"></span></span></span>
+            <span class="gs-tab-label">샤인 스윕</span>
+          </button>
+          <button type="button" class="gs-tab" data-style="heartbeat">
+            <span class="gs-tab-preview gs-style-heartbeat"><span class="gs-tab-track"><span class="gs-tab-fill"></span></span></span>
+            <span class="gs-tab-label">심장박동</span>
+          </button>
+          <button type="button" class="gs-tab active" data-style="segment">
+            <span class="gs-tab-preview gs-style-segment"><span class="gs-tab-track"><span class="gs-tab-fill"></span></span></span>
+            <span class="gs-tab-label">세그먼트 블링크</span>
+          </button>
+        </div>
+      </div>
+      <div class="hint">진행 게이지 · "마지막 O명 남았습니다" 문구가 자동으로 표시됩니다.<br>타이머는 "00 : 00 : 00" 형식(분:초:1/100초)이며, 위에서 설정한 시간부터 0까지 반복해서 카운트다운됩니다.</div>
+      <div class="field">
+        <label>게이지 상단 여백 (px)</label>
+        <div class="range-row">
+          <input type="range" id="f_gaugeMarginTop" min="0" max="30" value="18.2" step="0.1">
+          <span class="range-val" id="gaugeMarginTopVal">18.2</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>게이지 하단 여백 (px)</label>
+        <div class="range-row">
+          <input type="range" id="f_gaugeMarginBottom" min="0" max="30" value="12.3" step="0.1">
+          <span class="range-val" id="gaugeMarginBottomVal">12.3</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>게이지 너비 (px)</label>
+        <div class="range-row">
+          <input type="range" id="f_gaugeWidth" min="60" max="400" value="381" step="1">
+          <span class="range-val" id="gaugeWidthVal">381</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>게이지 두께 (px)</label>
+        <div class="range-row">
+          <input type="range" id="f_gaugeHeight" min="4" max="30" value="19.9" step="0.1">
+          <span class="range-val" id="gaugeHeightVal">19.9</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>타이머 — 크기 (%) / 위치(상하, px)</label>
+        <div class="row2">
+          <div class="range-row">
+            <input type="range" id="f_timerScale" min="50" max="200" value="100" step="5">
+            <span class="range-val" id="timerScaleVal">100%</span>
+          </div>
+          <div class="range-row">
+            <input type="range" id="f_timerPosY" min="-30" max="30" value="0" step="1">
+            <span class="range-val" id="timerPosYVal">0px</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>배지("곧 선착순 종료") — 크기 (%) / 위치(상하, px)</label>
+        <div class="row2">
+          <div class="range-row">
+            <input type="range" id="f_badgeScale" min="50" max="200" value="140" step="5">
+            <span class="range-val" id="badgeScaleVal">140%</span>
+          </div>
+          <div class="range-row">
+            <input type="range" id="f_badgePosY" min="-30" max="30" value="-10" step="1">
+            <span class="range-val" id="badgePosYVal">-10px</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>배지 모양</label>
+        <input type="hidden" id="f_badgeStyle" value="pill">
+        <div class="badge-style-tabs" id="badgeStyleTabs">
+          <button type="button" class="bs-tab" data-style="rounded">
+            <span class="bs-tab-preview"><span class="bs-shape bs-rounded">BADGE</span></span>
+            <span class="bs-tab-label">라운드</span>
+          </button>
+          <button type="button" class="bs-tab active" data-style="pill">
+            <span class="bs-tab-preview"><span class="bs-shape bs-pill">BADGE</span></span>
+            <span class="bs-tab-label">필(알약)</span>
+          </button>
+          <button type="button" class="bs-tab" data-style="sharp">
+            <span class="bs-tab-preview"><span class="bs-shape bs-sharp">BADGE</span></span>
+            <span class="bs-tab-label">각진 사각</span>
+          </button>
+          <button type="button" class="bs-tab" data-style="ribbon">
+            <span class="bs-tab-preview"><span class="bs-shape bs-ribbon">BADGE</span></span>
+            <span class="bs-tab-label">리본형</span>
+          </button>
+          <button type="button" class="bs-tab" data-style="hexagon">
+            <span class="bs-tab-preview"><span class="bs-shape bs-hexagon">BADGE</span></span>
+            <span class="bs-tab-label">육각형</span>
+          </button>
+          <button type="button" class="bs-tab" data-style="tag">
+            <span class="bs-tab-preview"><span class="bs-shape bs-tag">BADGE</span></span>
+            <span class="bs-tab-label">태그형</span>
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <label>강조 문구("올해 마지막~") — 크기 (%) / 위치(상하, px)</label>
+        <div class="row2">
+          <div class="range-row">
+            <input type="range" id="f_highlightScale" min="50" max="200" value="140" step="5">
+            <span class="range-val" id="highlightScaleVal">140%</span>
+          </div>
+          <div class="range-row">
+            <input type="range" id="f_highlightPosY" min="-30" max="30" value="0" step="1">
+            <span class="range-val" id="highlightPosYVal">0px</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>잔여 인원 문구("마지막 O명 남았습니다") — 크기 (%) / 위치(상하, px)</label>
+        <div class="row2">
+          <div class="range-row">
+            <input type="range" id="f_gaugeRemainScale" min="50" max="200" value="140" step="5">
+            <span class="range-val" id="gaugeRemainScaleVal">140%</span>
+          </div>
+          <div class="range-row">
+            <input type="range" id="f_gaugeRemainPosY" min="-30" max="30" value="10" step="1">
+            <span class="range-val" id="gaugeRemainPosYVal">+10px</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">날짜</p>
+      <div class="radio-set">
+        <label><input type="radio" name="dateMode" value="auto" checked> 자동 계산</label>
+        <label><input type="radio" name="dateMode" value="fixed"> 날짜 직접 입력</label>
+      </div>
+      <div class="field">
+        <label>날짜 — 크기 (%) / 위치(상하, px)</label>
+        <div class="row2">
+          <div class="range-row">
+            <input type="range" id="f_dateScale" min="50" max="200" step="5" value="100">
+            <span class="range-val" id="dateScaleVal">100%</span>
+          </div>
+          <div class="range-row">
+            <input type="range" id="f_datePosY" min="-30" max="30" value="0" step="1">
+            <span class="range-val" id="datePosYVal">0px</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="dateAutoBox">
+        <div class="field">
+          <label>시작일 — 오늘로부터 며칠 전</label>
+          <input type="number" id="f_daysAgo" value="3" min="0">
+        </div>
+        <div class="hint">방문할 때마다 "오늘"을 기준으로 시작일과 종료일이 자동 갱신됩니다.</div>
+      </div>
+
+      <div id="dateFixedBox" style="display:none;">
+        <div class="row2">
+          <div class="field">
+            <label>시작일</label>
+            <input type="date" id="f_startDate">
+          </div>
+          <div class="field">
+            <label>종료일</label>
+            <input type="date" id="f_endDate">
+          </div>
+        </div>
+        <div class="hint">고정된 날짜로 노출됩니다 (페이지 방문 시점과 무관).</div>
+      </div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">색상</p>
+      <div class="field">
+        <label>테마 프리셋</label>
+        <div class="theme-preset-row">
+          <button type="button" class="theme-preset-btn" id="themeDarkBtn">다크 (기본)</button>
+          <button type="button" class="theme-preset-btn" id="themeLightBtn">라이트 (흰색 배경)</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>포인트 컬러 (배지 · 강조 날짜 · 화살표)</label>
+        <div class="color-row">
+          <input type="color" id="f_accentColor" value="#ff3b3b">
+          <input type="text" id="f_accentColorText" value="#ff3b3b">
+        </div>
+        <div class="swatch-row" data-swatch-for="accent"></div>
+      </div>
+      <div class="field">
+        <label>섹션 배경색</label>
+        <div class="color-row">
+          <input type="color" id="f_sectionBg" value="#000000">
+          <input type="text" id="f_sectionBgText" value="#000000">
+        </div>
+        <div class="swatch-row" data-swatch-for="sectionBg"></div>
+      </div>
+      <div class="field">
+        <label>카드 배경색</label>
+        <div class="color-row">
+          <input type="color" id="f_cardBg" value="#0f0f0f">
+          <input type="text" id="f_cardBgText" value="#0f0f0f">
+        </div>
+        <div class="swatch-row" data-swatch-for="cardBg"></div>
+      </div>
+      <div class="field">
+        <label>텍스트 색상 (제목 · 본문)</label>
+        <div class="color-row">
+          <input type="color" id="f_textColor" value="#ffffff">
+          <input type="text" id="f_textColorText" value="#ffffff">
+        </div>
+        <div class="swatch-row" data-swatch-for="textColor"></div>
+      </div>
+      <div class="field">
+        <label>잔여 인원 숫자 색상 (게이지 하단 "O명")</label>
+        <div class="color-row">
+          <input type="color" id="f_remainNumColor" value="#FFE600">
+          <input type="text" id="f_remainNumColorText" value="#FFE600">
+        </div>
+        <div class="swatch-row" data-swatch-for="remainNumColor"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">폰트 &amp; 텍스트 크기</p>
+      <div class="field">
+        <label>폰트</label>
+        <select id="f_font">
+          <option value="pretendard" selected>프리텐다드 (Pretendard)</option>
+          <option value="gmarket">지마켓산스 (GmarketSans)</option>
+          <option value="nanumsquareround">나눔스퀘어라운드</option>
+          <option value="notosanskr">노토산스 KR</option>
+          <option value="system">시스템 기본 글꼴</option>
+        </select>
+        <div class="hint">티스토리 게시글에 삽입 시 자동으로 웹폰트가 로드됩니다.</div>
+      </div>
+      <div class="field">
+        <label>텍스트 크기</label>
+        <div class="range-row">
+          <input type="range" id="f_textScale" min="50" max="200" step="1" value="123">
+          <span class="range-val" id="textScaleVal">123%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">모션 효과</p>
+      <div class="field">
+        <label>하단 강조 모션</label>
+        <select id="f_motion">
+          <option value="arrow" selected>화살표 (하단 표시)</option>
+          <option value="dots">점 3개 깜빡임</option>
+          <option value="ripple">파동 링 (레이더 효과)</option>
+          <option value="glow">카드 테두리 네온 글로우</option>
+          <option value="border">회전 그라데이션 테두리</option>
+          <option value="shine">배지 샤인 스윕</option>
+          <option value="bounce">배지 통통 튕김</option>
+          <option value="flashbg">카드 배경 긴급 플래시</option>
+          <option value="shake">카드 흔들림</option>
+          <option value="hlpulse">강조 텍스트 컬러 펄스</option>
+          <option value="underline">강조 텍스트 밑줄 스윕</option>
+        </select>
+      </div>
+      <div class="field" id="arrowStyleBox">
+        <label>화살표 애니메이션 스타일</label>
+        <select id="f_arrowStyle">
+          <option value="blink" selected>깜빡임 (기본)</option>
+          <option value="wave">순차 웨이브 깜빡임</option>
+          <option value="slide">아래로 흐르는 이동</option>
+          <option value="bounce">통통 튕김</option>
+          <option value="pulse">확대·축소 펄스</option>
+          <option value="shake">좌우 흔들림</option>
+        </select>
+      </div>
+        <div class="hint">화살표·점·파동은 하단 자리에 표시되고, 나머지(글로우/회전테두리/샤인/통통튕김/배경플래시/흔들림/강조텍스트펄스/밑줄스윕)는 카드·배지·강조 텍스트 전체에 적용되는 모션입니다. 강조 텍스트 계열 효과는 <b>[[강조할 텍스트]]</b>가 있어야 눈에 띕니다. 모두 클릭 유도(CVR)에 도움이 되는 긴급성·주목 효과입니다.</div>
+    </div>
+
+  </div>
+
+  <!-- 우측 미리보기 -->
+  <div class="right">
+    <div class="preview-head">
+      <p class="preview-label">미리보기</p>
+      <div class="preview-actions">
+        <button type="button" class="reset-btn copy-accent" id="quickCopyBtn" title="생성된 코드 복사">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          코드 복사
+        </button>
+        <button type="button" class="reset-btn" id="quickResetBtn" title="모든 설정을 기본값으로 되돌립니다">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+          초기화
+        </button>
+      </div>
+    </div>
+    <div class="preview-wrap">
+      <div id="previewMount"></div>
+    </div>
+  </div>
+</div>
+
+<textarea id="outputCode" class="visually-hidden-field" readonly spellcheck="false" aria-hidden="true" tabindex="-1"></textarea>
+
+<script>
+(function(){
+  "use strict";
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  var fields = {
+    title: $('f_title'), badge: $('f_badge'), highlight: $('f_highlight'),
+    line1: $('f_line1'), line2: $('f_line2'),
+    gaugeEnable: $('f_gaugeEnable'), gaugeCurrent: $('f_gaugeCurrent'), gaugeMax: $('f_gaugeMax'),
+    deadlineEnable: $('f_deadlineEnable'),
+    remainCopy: $('f_remainCopy'),
+    urgentEnable: $('f_urgentEnable'), urgentThreshold: $('f_urgentThreshold'), urgentMotion: $('f_urgentMotion'),
+    gaugeStyle: $('f_gaugeStyle'), timerEnable: $('f_timerEnable'),
+    timerMinutes: $('f_timerMinutes'), timerSeconds: $('f_timerSeconds'), timerCentiseconds: $('f_timerCentiseconds'),
+    daysAgo: $('f_daysAgo'), startDate: $('f_startDate'), endDate: $('f_endDate'),
+    accentColor: $('f_accentColor'), accentColorText: $('f_accentColorText'),
+    sectionBg: $('f_sectionBg'), sectionBgText: $('f_sectionBgText'),
+    cardBg: $('f_cardBg'), cardBgText: $('f_cardBgText'),
+    textColor: $('f_textColor'), textColorText: $('f_textColorText'),
+    remainNumColor: $('f_remainNumColor'), remainNumColorText: $('f_remainNumColorText'),
+    masterScale: $('f_masterScale'),
+    font: $('f_font'), textScale: $('f_textScale'), motion: $('f_motion'), arrowStyle: $('f_arrowStyle'),
+    dateScale: $('f_dateScale'), datePosY: $('f_datePosY'),
+    gaugeMarginTop: $('f_gaugeMarginTop'), gaugeMarginBottom: $('f_gaugeMarginBottom'),
+    gaugeWidth: $('f_gaugeWidth'), gaugeHeight: $('f_gaugeHeight'),
+    timerScale: $('f_timerScale'), timerPosY: $('f_timerPosY'),
+    badgeScale: $('f_badgeScale'), badgePosY: $('f_badgePosY'), badgeStyle: $('f_badgeStyle'),
+    highlightScale: $('f_highlightScale'), highlightPosY: $('f_highlightPosY'),
+    gaugeRemainScale: $('f_gaugeRemainScale'), gaugeRemainPosY: $('f_gaugeRemainPosY'),
+    titleScale: $('f_titleScale'), titlePosY: $('f_titlePosY'),
+    line1Scale: $('f_line1Scale'), line1PosY: $('f_line1PosY'),
+    line2Scale: $('f_line2Scale'), line2PosY: $('f_line2PosY'),
+    viewerDropEnable: $('f_viewerDropEnable'), viewerDropMin: $('f_viewerDropMin'),
+    viewerDropSec: $('f_viewerDropSec'), viewerDropCount: $('f_viewerDropCount'),
+    viewerDropCurrent: $('f_viewerDropCurrent')
+  };
+
+  var dateAutoBox = $('dateAutoBox');
+  var dateFixedBox = $('dateFixedBox');
+  var radios = document.getElementsByName('dateMode');
+  var arrowStyleBox = $('arrowStyleBox');
+
+  // ---------- 추천 색상 팔레트 ----------
+  var PALETTE = {
+    accent:    ['#ff3b3b', '#ff6b35', '#2f6fed', '#00c853', '#7c3aed', '#a7fb3c', '#00d9b3', '#fbf541', '#e8000d', '#2f8fff', '#7c4dff'],
+    sectionBg: ['#000000', '#0a0e17', '#111318', '#f5f5f5', '#0d1b2a'],
+    cardBg:    ['#0f0f0f', '#16181d', '#1a1f2b', '#ffffff', '#101820'],
+    textColor: ['#ffffff', '#f2f2f2', '#e8e8e8', '#111111', '#0a0a0a'],
+    remainNumColor: ['#FFE600', '#ffffff', '#ffd166', '#00e5ff', '#ff3b3b', '#a7fb3c', '#00d9b3', '#fbf541', '#e8000d', '#2f8fff', '#7c4dff']
+  };
+  var PALETTE_MAP = {
+    accent:    { color: fields.accentColor, text: fields.accentColorText },
+    sectionBg: { color: fields.sectionBg,   text: fields.sectionBgText },
+    cardBg:    { color: fields.cardBg,      text: fields.cardBgText },
+    textColor: { color: fields.textColor,   text: fields.textColorText },
+    remainNumColor: { color: fields.remainNumColor, text: fields.remainNumColorText }
+  };
+  document.querySelectorAll('[data-swatch-for]').forEach(function(row){
+    var key = row.getAttribute('data-swatch-for');
+    PALETTE[key].forEach(function(hex){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'swatch';
+      btn.style.background = hex;
+      btn.title = hex;
+      btn.addEventListener('click', function(){
+        PALETTE_MAP[key].color.value = hex;
+        PALETTE_MAP[key].text.value = hex;
+        render();
+      });
+      row.appendChild(btn);
+    });
+  });
+
+  // ---------- 폰트 옵션 ----------
+  var FONT_OPTIONS = {
+    pretendard: {
+      stack: "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, \"Apple SD Gothic Neo\", \"Noto Sans KR\", \"Segoe UI\", sans-serif",
+      head: '<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">'
+    },
+    gmarket: {
+      stack: "'GmarketSans', -apple-system, BlinkMacSystemFont, \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif",
+      head:
+'<style>\n' +
+"@font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansLight.woff') format('woff'); font-weight: 300; font-display: swap; }\n" +
+"@font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff') format('woff'); font-weight: 500; font-display: swap; }\n" +
+"@font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff') format('woff'); font-weight: 700; font-display: swap; }\n" +
+'</style>'
+    },
+    nanumsquareround: {
+      stack: "'NanumSquareRound', -apple-system, BlinkMacSystemFont, \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif",
+      head: '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ChalkPE/NanumSquareRound/nanumsquareround.min.css">'
+    },
+    notosanskr: {
+      stack: "'Noto Sans KR', -apple-system, BlinkMacSystemFont, \"Apple SD Gothic Neo\", sans-serif",
+      head: '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap">'
+    },
+    system: {
+      stack: "-apple-system, BlinkMacSystemFont, \"Apple SD Gothic Neo\", \"Malgun Gothic\", sans-serif",
+      head: ''
+    }
+  };
+
+  var loadedFontHeads = {};
+  function loadFontForPreview(key){
+    if (loadedFontHeads[key]) return;
+    loadedFontHeads[key] = true;
+    var opt = FONT_OPTIONS[key];
+    if (!opt || !opt.head) return;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = opt.head;
+    Array.prototype.forEach.call(wrap.childNodes, function(node){
+      document.head.appendChild(node);
+    });
+  }
+
+  // ---------- 텍스트 크기 슬라이더 ----------
+  fields.textScale.addEventListener('input', function(){
+    setMasterScale(fields.textScale.value);
+  });
+  fields.font.addEventListener('change', function(){
+    loadFontForPreview(fields.font.value);
+    render();
+  });
+  fields.motion.addEventListener('change', function(){
+    arrowStyleBox.style.display = (fields.motion.value === 'arrow') ? '' : 'none';
+    render();
+  });
+  fields.arrowStyle.addEventListener('change', render);
+
+  // ---------- 날짜 크기 슬라이더 ----------
+  fields.dateScale.addEventListener('input', function(){
+    $('dateScaleVal').textContent = fields.dateScale.value + '%';
+    render();
+  });
+
+  // ---------- 게이지 상하 여백 슬라이더 ----------
+  fields.gaugeMarginTop.addEventListener('input', function(){
+    $('gaugeMarginTopVal').textContent = fields.gaugeMarginTop.value;
+    render();
+  });
+  fields.gaugeMarginBottom.addEventListener('input', function(){
+    $('gaugeMarginBottomVal').textContent = fields.gaugeMarginBottom.value;
+    render();
+  });
+
+  // ---------- 게이지 너비/두께 슬라이더 ----------
+  fields.gaugeWidth.addEventListener('input', function(){
+    $('gaugeWidthVal').textContent = fields.gaugeWidth.value;
+    render();
+  });
+  fields.gaugeHeight.addEventListener('input', function(){
+    $('gaugeHeightVal').textContent = fields.gaugeHeight.value;
+    render();
+  });
+
+  // ---------- 타이머 크기 슬라이더 ----------
+  fields.timerScale.addEventListener('input', function(){
+    $('timerScaleVal').textContent = fields.timerScale.value + '%';
+    render();
+  });
+
+  // ---------- 배지 크기 슬라이더 ----------
+  fields.badgeScale.addEventListener('input', function(){
+    $('badgeScaleVal').textContent = fields.badgeScale.value + '%';
+    render();
+  });
+
+  // ---------- 강조 문구 크기 슬라이더 ----------
+  fields.highlightScale.addEventListener('input', function(){
+    $('highlightScaleVal').textContent = fields.highlightScale.value + '%';
+    render();
+  });
+
+  // ---------- 요소별 크기(%) / 위치(상하, px) 슬라이더 일괄 바인딩 ----------
+  function bindScaleSlider(field, valId){
+    field.addEventListener('input', function(){
+      $(valId).textContent = field.value + '%';
+      render();
+    });
+  }
+  function bindPosYSlider(field, valId){
+    field.addEventListener('input', function(){
+      var n = parseFloat(field.value) || 0;
+      $(valId).textContent = (n > 0 ? '+' : '') + n + 'px';
+      render();
+    });
+  }
+  bindScaleSlider(fields.titleScale, 'titleScaleVal');
+  bindPosYSlider(fields.titlePosY, 'titlePosYVal');
+  bindScaleSlider(fields.line1Scale, 'line1ScaleVal');
+  bindPosYSlider(fields.line1PosY, 'line1PosYVal');
+  bindScaleSlider(fields.line2Scale, 'line2ScaleVal');
+  bindPosYSlider(fields.line2PosY, 'line2PosYVal');
+  bindScaleSlider(fields.gaugeRemainScale, 'gaugeRemainScaleVal');
+  bindPosYSlider(fields.gaugeRemainPosY, 'gaugeRemainPosYVal');
+  bindPosYSlider(fields.datePosY, 'datePosYVal');
+  bindPosYSlider(fields.badgePosY, 'badgePosYVal');
+  bindPosYSlider(fields.highlightPosY, 'highlightPosYVal');
+  bindPosYSlider(fields.timerPosY, 'timerPosYVal');
+
+  // 색상 picker <-> 텍스트 필드 동기화
+  function linkColor(colorInput, textInput){
+    colorInput.addEventListener('input', function(){
+      textInput.value = colorInput.value;
+      render();
+    });
+    textInput.addEventListener('input', function(){
+      if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(textInput.value)){
+        colorInput.value = normalizeHex(textInput.value);
+      }
+      render();
+    });
+  }
+  function normalizeHex(hex){
+    if (hex.length === 4){
+      return '#' + hex[1]+hex[1] + hex[2]+hex[2] + hex[3]+hex[3];
+    }
+    return hex;
+  }
+  // 두 hex 색상을 ratio(0~1) 비율로 섞은 hex 값 반환 (color-mix 미지원 환경 대비)
+  function mixHex(baseHex, mixHexColor, ratio){
+    function toRgb(h){
+      h = normalizeHex(h).replace('#','');
+      if (h.length !== 6) h = '0f0f0f';
+      return [parseInt(h.substr(0,2),16), parseInt(h.substr(2,2),16), parseInt(h.substr(4,2),16)];
+    }
+    var b = toRgb(baseHex);
+    var m = toRgb(mixHexColor);
+    var r = Math.round(b[0] + (m[0]-b[0]) * ratio);
+    var g = Math.round(b[1] + (m[1]-b[1]) * ratio);
+    var bl = Math.round(b[2] + (m[2]-b[2]) * ratio);
+    function hx(n){ return ('0'+n.toString(16)).slice(-2); }
+    return '#' + hx(r) + hx(g) + hx(bl);
+  }
+  // 배경색의 밝기를 판단해서, 밝은 배경(흰색 등)에서도 테두리/트랙 등이 보이도록 오버레이 색을 자동으로 뒤집어줌
+  function isLightHex(hex){
+    var h = normalizeHex(hex || '#0f0f0f').replace('#','');
+    if (h.length !== 6) return false;
+    var r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
+    var luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
+    return luminance > 0.62;
+  }
+  linkColor(fields.accentColor, fields.accentColorText);
+  linkColor(fields.sectionBg, fields.sectionBgText);
+  linkColor(fields.cardBg, fields.cardBgText);
+  linkColor(fields.textColor, fields.textColorText);
+  linkColor(fields.remainNumColor, fields.remainNumColorText);
+
+  // ---------- 테마 프리셋 (다크 / 라이트) ----------
+  var THEME_PRESETS = {
+    dark:  { sectionBg:'#000000', cardBg:'#0f0f0f', textColor:'#ffffff', remainNumColor:'#FFE600' },
+    light: { sectionBg:'#ffffff', cardBg:'#0f0f0f', textColor:'#ffffff', remainNumColor:'#FFE600' }
+  };
+  function applyTheme(name){
+    var t = THEME_PRESETS[name];
+    fields.sectionBg.value = t.sectionBg; fields.sectionBgText.value = t.sectionBg;
+    fields.cardBg.value = t.cardBg; fields.cardBgText.value = t.cardBg;
+    fields.textColor.value = t.textColor; fields.textColorText.value = t.textColor;
+    fields.remainNumColor.value = t.remainNumColor; fields.remainNumColorText.value = t.remainNumColor;
+    $('themeDarkBtn').classList.toggle('active', name === 'dark');
+    $('themeLightBtn').classList.toggle('active', name === 'light');
+    render();
+  }
+  $('themeDarkBtn').addEventListener('click', function(){ applyTheme('dark'); });
+  $('themeLightBtn').addEventListener('click', function(){ applyTheme('light'); });
+  $('themeDarkBtn').classList.add('active');
+
+  [fields.title, fields.badge, fields.highlight, fields.line1, fields.line2,
+   fields.gaugeCurrent, fields.gaugeMax, fields.remainCopy,
+   fields.timerMinutes, fields.timerSeconds, fields.timerCentiseconds,
+   fields.daysAgo, fields.startDate, fields.endDate].forEach(function(el){
+    el.addEventListener('input', render);
+  });
+  // ---------- 최상단 전체 텍스트 크기 (텍스트 크기 슬라이더와 양방향 연동) ----------
+  var msChips = document.querySelectorAll('#masterScaleGroup .ms-chip');
+  function syncMasterScaleUI(val){
+    $('masterScaleVal').textContent = val + '%';
+    $('textScaleVal').textContent = val + '%';
+    msChips.forEach(function(c){
+      c.classList.toggle('active', c.getAttribute('data-ms') === String(val));
+    });
+  }
+  function setMasterScale(val, doRender){
+    val = Math.min(200, Math.max(50, parseInt(val, 10) || 100));
+    fields.masterScale.value = val;
+    fields.textScale.value = val;
+    syncMasterScaleUI(val);
+    if (doRender !== false) render();
+  }
+  fields.masterScale.addEventListener('input', function(){
+    setMasterScale(fields.masterScale.value);
+  });
+  msChips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      setMasterScale(chip.getAttribute('data-ms'));
+    });
+  });
+
+  fields.gaugeEnable.addEventListener('change', render);
+  fields.deadlineEnable.addEventListener('change', render);
+  fields.timerEnable.addEventListener('change', render);
+  fields.urgentEnable.addEventListener('change', render);
+  fields.urgentThreshold.addEventListener('input', render);
+  fields.urgentMotion.addEventListener('change', render);
+  fields.viewerDropEnable.addEventListener('change', render);
+  fields.viewerDropMin.addEventListener('input', render);
+  fields.viewerDropSec.addEventListener('input', render);
+  fields.viewerDropCount.addEventListener('input', render);
+  fields.viewerDropCurrent.addEventListener('input', render);
+
+  // ---------- 게이지 스타일 탭 선택 ----------
+  var gaugeStyleTabs = document.querySelectorAll('#gaugeStyleTabs .gs-tab');
+  gaugeStyleTabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      gaugeStyleTabs.forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      fields.gaugeStyle.value = tab.getAttribute('data-style');
+      render();
+    });
+  });
+
+  // ---------- 배지 모양 탭 선택 ----------
+  var badgeStyleTabs = document.querySelectorAll('#badgeStyleTabs .bs-tab');
+  badgeStyleTabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      badgeStyleTabs.forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      fields.badgeStyle.value = tab.getAttribute('data-style');
+      render();
+    });
+  });
+  for (var i=0; i<radios.length; i++){
+    radios[i].addEventListener('change', function(){
+      var mode = getDateMode();
+      dateAutoBox.style.display = (mode === 'auto') ? '' : 'none';
+      dateFixedBox.style.display = (mode === 'fixed') ? '' : 'none';
+      render();
+    });
+  }
+
+  function getDateMode(){
+    for (var i=0; i<radios.length; i++){
+      if (radios[i].checked) return radios[i].value;
+    }
+    return 'auto';
+  }
+
+  // ---------- clamp() 값 스케일링 (텍스트 크기 %) ----------
+  function scaleClamp(minPx, vw, maxPx, factor){
+    var mn = Math.round(minPx * factor);
+    var mx = Math.round(maxPx * factor);
+    var v = (vw * factor).toFixed(2).replace(/\.?0+$/, '');
+    return 'clamp(' + mn + 'px, ' + v + 'vw, ' + mx + 'px)';
+  }
+
+  function randUid(){
+    return Math.random().toString(36).slice(2, 8);
+  }
+  // 생성기가 열려있는 동안은 미리보기용 uid 고정, "코드 복사" 시점엔 최종 코드에도 동일 uid 재사용
+  var previewUid = randUid();
+
+  // ---------- 미리보기용 타이머 (실제 setInterval로 실시간 갱신) ----------
+  var previewTimerHandle = null;
+  function stopPreviewTimer(){
+    if (previewTimerHandle){ clearInterval(previewTimerHandle); previewTimerHandle = null; }
+  }
+  function startPreviewTimer(uid){
+    stopPreviewTimer();
+    var elM = document.getElementById('tsDeadlineTimerM_' + uid);
+    var elS = document.getElementById('tsDeadlineTimerS_' + uid);
+    var elCS = document.getElementById('tsDeadlineTimerCS_' + uid);
+    if (!elM || !elS || !elCS) return;
+    function pad2(n){ return (n < 10 ? '0' : '') + n; }
+    var minutes = Math.max(parseInt(fields.timerMinutes.value, 10) || 0, 0);
+    var seconds = Math.max(parseInt(fields.timerSeconds.value, 10) || 0, 0);
+    var centiseconds = Math.max(parseInt(fields.timerCentiseconds.value, 10) || 0, 0);
+    var totalMs = (minutes * 60 + seconds) * 1000 + centiseconds * 10;
+    if (totalMs <= 0) totalMs = 1000;
+    var startTime = Date.now();
+
+    function tick(){
+      var elapsed = (Date.now() - startTime) % totalMs;
+      var remaining = totalMs - elapsed;
+      var m = Math.floor(remaining / 60000);
+      var s = Math.floor((remaining % 60000) / 1000);
+      var cs = Math.floor((remaining % 1000) / 10);
+      elM.textContent = pad2(m);
+      elS.textContent = pad2(s);
+      elCS.textContent = pad2(cs);
+    }
+    tick();
+    previewTimerHandle = setInterval(tick, 20);
+  }
+
+  // ---------- 미리보기용 "잔여 인원 자동 전환" 감시 (타이머 표시 On/Off와 완전히 무관하게 항상 독립 동작) ----------
+  var viewerDropPreviewHandle = null;
+  function stopViewerDropPreview(){
+    if (viewerDropPreviewHandle){ clearInterval(viewerDropPreviewHandle); viewerDropPreviewHandle = null; }
+  }
+  function startViewerDropPreview(uid){
+    stopViewerDropPreview();
+    if (!fields.viewerDropEnable.checked) return;
+
+    var minutes = Math.max(parseInt(fields.timerMinutes.value, 10) || 0, 0);
+    var seconds = Math.max(parseInt(fields.timerSeconds.value, 10) || 0, 0);
+    var centiseconds = Math.max(parseInt(fields.timerCentiseconds.value, 10) || 0, 0);
+    var totalMs = (minutes * 60 + seconds) * 1000 + centiseconds * 10;
+    if (totalMs <= 0) totalMs = 1000;
+
+    var dropMin = Math.max(parseInt(fields.viewerDropMin.value, 10) || 0, 0);
+    var dropSec = Math.max(parseInt(fields.viewerDropSec.value, 10) || 0, 0);
+    var dropAtMs = (dropMin * 60 + dropSec) * 1000;
+    var dropCount = Math.max(parseInt(fields.viewerDropCount.value, 10) || 0, 0);
+    var dropCurrent = Math.max(parseInt(fields.viewerDropCurrent.value, 10) || 0, 0);
+    var startTime = Date.now();
+
+    function tick(){
+      var remainNumEl = document.querySelector('.ts-deadline-gauge-remain-num-' + uid);
+      if (!remainNumEl) return;
+      var elapsed = (Date.now() - startTime) % totalMs;
+      var remaining = totalMs - elapsed;
+      if (remaining > 0 && remaining <= dropAtMs) {
+        remainNumEl.textContent = dropCount;
+        var curNumEl = document.querySelector('.ts-deadline-hl-cur-' + uid);
+        if (curNumEl) curNumEl.textContent = dropCurrent;
+        if (fields.urgentEnable.checked && dropCount > 0 && dropCount <= (parseInt(fields.urgentThreshold.value, 10) || 0)) {
+          var remainLineEl = document.querySelector('.ts-deadline-gauge-remain-' + uid);
+          if (remainLineEl) remainLineEl.classList.add('ts-deadline-urgent-' + uid);
+        }
+        stopViewerDropPreview();
+      }
+    }
+    tick();
+    viewerDropPreviewHandle = setInterval(tick, 250);
+  }
+
+  var DAY_NAMES = ["일","월","화","수","목","금","토"];
+
+  function formatDateParts(d){
+    return { m: d.getMonth()+1, d: d.getDate(), day: DAY_NAMES[d.getDay()] };
+  }
+
+  function buildDateHtml(uid){
+    var mode = getDateMode();
+    var startHtml, endHtml;
+
+    if (mode === 'fixed'){
+      var sVal = fields.startDate.value;
+      var eVal = fields.endDate.value;
+      var sObj = sVal ? new Date(sVal + 'T00:00:00') : new Date();
+      var eObj = eVal ? new Date(eVal + 'T00:00:00') : new Date();
+      var sp = formatDateParts(sObj);
+      var ep = formatDateParts(eObj);
+      return {
+        js: null,
+        staticText: sp.m + '/' + sp.d + '(' + sp.day + ') ~ ',
+        redText: ep.m + '/' + ep.d + '(' + ep.day + ')'
+      };
+    } else {
+      return { js: 'auto', daysAgo: parseInt(fields.daysAgo.value, 10) || 0 };
+    }
+  }
+
+  function escHtml(s){
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  // [[강조]] 표기를 노란색 강조 span으로 변환 (하단 설명 줄1/줄2용)
+  // extraClass를 넘기면 (상단 강조 문구용) 전환 스크립트가 찾아 값을 바꿀 수 있도록 클래스를 추가로 붙임
+  function escHighlight(s, uid, extraClass){
+    var esc = escHtml(s);
+    return esc.replace(/\[\[(.+?)\]\]/g, function(_, inner){
+      return '<span class="ts-deadline-hl-' + uid + (extraClass ? ' ' + extraClass : '') + '">' + inner + '</span>';
+    });
+  }
+
+  // ---------- 모션 마크업 (화살표 / 점 / 없음) ----------
+  function buildMotionHtml(uid, motion){
+    if (motion === 'arrow'){
+      return '        <div class="ts-deadline-arrow-wrap-' + uid + '">\n' +
+'            <span class="ts-deadline-tri-' + uid + '"></span>\n' +
+'            <span class="ts-deadline-tri-' + uid + '"></span>\n' +
+'            <span class="ts-deadline-tri-' + uid + '"></span>\n' +
+'        </div>\n';
+    }
+    if (motion === 'dots'){
+      return '        <div class="ts-deadline-arrow-wrap-' + uid + '">\n' +
+'            <span class="ts-deadline-dot-' + uid + '"></span>\n' +
+'            <span class="ts-deadline-dot-' + uid + '"></span>\n' +
+'            <span class="ts-deadline-dot-' + uid + '"></span>\n' +
+'        </div>\n';
+    }
+    if (motion === 'ripple'){
+      return '        <div class="ts-deadline-arrow-wrap-' + uid + '">\n' +
+'            <span class="ts-deadline-ripple-' + uid + '">\n' +
+'                <span class="ts-deadline-ripple-ring-' + uid + '"></span>\n' +
+'                <span class="ts-deadline-ripple-ring-' + uid + '"></span>\n' +
+'                <span class="ts-deadline-ripple-core-' + uid + '"></span>\n' +
+'            </span>\n' +
+'        </div>\n';
+    }
+    // glow / border / shine / bounce / flashbg / shake: 화살표 자리를 쓰지 않고 카드/배지 전체에 모션 적용
+    return '';
+  }
+
+  // ---------- 모션 CSS (uid별 애니메이션) ----------
+  var BADGE_SHAPES = {
+    rounded: { radius: '6px',   clip: 'none', padH: '11px' },
+    pill:    { radius: '999px', clip: 'none', padH: '14px' },
+    sharp:   { radius: '0px',   clip: 'none', padH: '11px' },
+    ribbon:  { radius: '0px', clip: 'polygon(0 0, 100% 0, 91% 50%, 100% 100%, 0 100%, 9% 50%)', padH: '19px' },
+    hexagon: { radius: '0px', clip: 'polygon(7% 0, 93% 0, 100% 50%, 93% 100%, 7% 100%, 0 50%)',  padH: '21px' },
+    tag:     { radius: '0px', clip: 'polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%)',            padH: '17px' }
+  };
+  function getBadgeShape(style){
+    return BADGE_SHAPES[style] || BADGE_SHAPES.pill;
+  }
+
+  function buildMotionCss(uid, motion, accent, cardBg, arrowStyle){
+    if (motion === 'arrow'){
+      var wrapBase = '#tsDeadlineCardSection_' + uid + ' .ts-deadline-arrow-wrap-' + uid + ' {\n' +
+'    display: flex !important;\n' +
+'    justify-content: center !important;\n' +
+'    align-items: center !important;\n' +
+'    gap: 18px !important;\n' +
+'    margin-top: 12px !important;\n';
+      var triBase = '#tsDeadlineCardSection_' + uid + ' .ts-deadline-tri-' + uid + ' {\n' +
+'    display: inline-block !important;\n' +
+'    width: 0 !important;\n' +
+'    height: 0 !important;\n' +
+'    border-left: 15px solid transparent !important;\n' +
+'    border-right: 15px solid transparent !important;\n' +
+'    border-top: 23px solid ' + accent + ' !important;\n' +
+'    flex: 0 0 auto !important;\n';
+
+      if (arrowStyle === 'wave'){
+        return wrapBase + '}\n\n' +
+triBase + '    animation: tsDeadlineArrowWave_' + uid + ' 1.2s infinite ease-in-out !important;\n}\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-tri-' + uid + ':nth-child(2){ animation-delay: 0.15s !important; }\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-tri-' + uid + ':nth-child(3){ animation-delay: 0.3s !important; }\n\n' +
+'@keyframes tsDeadlineArrowWave_' + uid + ' {\n' +
+'    0%, 100% { opacity: 0.25; transform: translateY(0) scale(0.85); }\n' +
+'    50%       { opacity: 1; transform: translateY(3px) scale(1); }\n' +
+'}\n';
+      }
+      if (arrowStyle === 'slide'){
+        return wrapBase + '}\n\n' +
+triBase + '    opacity: 0 !important;\n' +
+'    animation: tsDeadlineArrowSlide_' + uid + ' 1.4s infinite ease-in-out !important;\n}\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-tri-' + uid + ':nth-child(1){ animation-delay: 0s !important; }\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-tri-' + uid + ':nth-child(2){ animation-delay: 0.18s !important; }\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-tri-' + uid + ':nth-child(3){ animation-delay: 0.36s !important; }\n\n' +
+'@keyframes tsDeadlineArrowSlide_' + uid + ' {\n' +
+'    0%   { opacity: 0; transform: translateY(-8px); }\n' +
+'    40%   { opacity: 1; transform: translateY(0); }\n' +
+'    80%, 100% { opacity: 0; transform: translateY(10px); }\n' +
+'}\n';
+      }
+      if (arrowStyle === 'bounce'){
+        return wrapBase + '    animation: tsDeadlineArrowBounce_' + uid + ' 1s infinite ease-in-out !important;\n}\n\n' +
+triBase + '}\n\n' +
+'@keyframes tsDeadlineArrowBounce_' + uid + ' {\n' +
+'    0%, 100% { transform: translateY(0); }\n' +
+'    50%       { transform: translateY(-8px); }\n' +
+'}\n';
+      }
+      if (arrowStyle === 'pulse'){
+        return wrapBase + '    animation: tsDeadlineArrowPulse_' + uid + ' 1.1s infinite ease-in-out !important;\n}\n\n' +
+triBase + '}\n\n' +
+'@keyframes tsDeadlineArrowPulse_' + uid + ' {\n' +
+'    0%, 100% { transform: scale(1); opacity: 1; }\n' +
+'    50%       { transform: scale(1.2); opacity: 0.7; }\n' +
+'}\n';
+      }
+      if (arrowStyle === 'shake'){
+        return wrapBase + '    animation: tsDeadlineArrowShake_' + uid + ' 1.6s infinite ease-in-out !important;\n}\n\n' +
+triBase + '}\n\n' +
+'@keyframes tsDeadlineArrowShake_' + uid + ' {\n' +
+'    0%, 100% { transform: translateX(0); }\n' +
+'    25%       { transform: translateX(-5px); }\n' +
+'    75%       { transform: translateX(5px); }\n' +
+'}\n';
+      }
+      // blink (기본)
+      return wrapBase + '    animation: tsDeadlineBlink_' + uid + ' 1.2s infinite ease-in-out !important;\n}\n\n' +
+triBase + '}\n\n' +
+'@keyframes tsDeadlineBlink_' + uid + ' {\n' +
+'    0%, 100% { opacity: 1; }\n' +
+'    50%       { opacity: 0.2; }\n' +
+'}\n';
+    }
+    if (motion === 'dots'){
+      return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-arrow-wrap-' + uid + ' {\n' +
+'    display: flex !important;\n' +
+'    justify-content: center !important;\n' +
+'    align-items: center !important;\n' +
+'    gap: 10px !important;\n' +
+'    margin-top: 10px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-dot-' + uid + ' {\n' +
+'    display: inline-block !important;\n' +
+'    width: 9px !important;\n' +
+'    height: 9px !important;\n' +
+'    border-radius: 50% !important;\n' +
+'    background: ' + accent + ' !important;\n' +
+'    flex: 0 0 auto !important;\n' +
+'    animation: tsDeadlineDotBlink_' + uid + ' 1.2s infinite ease-in-out !important;\n' +
+'}\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-dot-' + uid + ':nth-child(2) { animation-delay: 0.2s !important; }\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-dot-' + uid + ':nth-child(3) { animation-delay: 0.4s !important; }\n\n' +
+'@keyframes tsDeadlineDotBlink_' + uid + ' {\n' +
+'    0%, 100% { opacity: 0.25; transform: scale(0.85); }\n' +
+'    50%       { opacity: 1; transform: scale(1); }\n' +
+'}\n';
+    }
+    if (motion === 'ripple'){
+      return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-arrow-wrap-' + uid + ' {\n' +
+'    display: flex !important;\n' +
+'    justify-content: center !important;\n' +
+'    align-items: center !important;\n' +
+'    margin-top: 12px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-ripple-' + uid + ' {\n' +
+'    position: relative !important;\n' +
+'    display: inline-flex !important;\n' +
+'    align-items: center !important;\n' +
+'    justify-content: center !important;\n' +
+'    width: 14px !important;\n' +
+'    height: 14px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-ripple-core-' + uid + ' {\n' +
+'    position: relative !important;\n' +
+'    width: 8px !important;\n' +
+'    height: 8px !important;\n' +
+'    border-radius: 50% !important;\n' +
+'    background: ' + accent + ' !important;\n' +
+'    z-index: 2 !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-ripple-ring-' + uid + ' {\n' +
+'    position: absolute !important;\n' +
+'    width: 8px !important;\n' +
+'    height: 8px !important;\n' +
+'    border-radius: 50% !important;\n' +
+'    border: 2px solid ' + accent + ' !important;\n' +
+'    opacity: 0 !important;\n' +
+'    animation: tsDeadlineRipple_' + uid + ' 1.8s infinite ease-out !important;\n' +
+'}\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-ripple-ring-' + uid + ':nth-child(2) { animation-delay: 0.6s !important; }\n\n' +
+'@keyframes tsDeadlineRipple_' + uid + ' {\n' +
+'    0%   { transform: scale(1); opacity: 0.8; }\n' +
+'    100% { transform: scale(2.8); opacity: 0; }\n' +
+'}\n';
+    }
+    if (motion === 'glow'){
+      return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-card-' + uid + ' {\n' +
+'    animation: tsDeadlineGlow_' + uid + ' 2.2s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsDeadlineGlow_' + uid + ' {\n' +
+'    0%, 100% { box-shadow: 0 12px 34px rgba(0, 0, 0, 0.72), 0 0 0px 0 ' + accent + '00; }\n' +
+'    50%       { box-shadow: 0 12px 34px rgba(0, 0, 0, 0.72), 0 0 22px 4px ' + accent + '99; }\n' +
+'}\n';
+    }
+    if (motion === 'border'){
+      return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-card-' + uid + ' {\n' +
+'    position: relative !important;\n' +
+'    overflow: visible !important;\n' +
+'    z-index: 0 !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-card-' + uid + '::before {\n' +
+'    content: "" !important;\n' +
+'    position: absolute !important;\n' +
+'    inset: -3px !important;\n' +
+'    border-radius: 21px !important;\n' +
+'    background: conic-gradient(from 0deg, ' + accent + ', transparent 30%, transparent 70%, ' + accent + ') !important;\n' +
+'    z-index: -1 !important;\n' +
+'    filter: blur(1.5px) !important;\n' +
+'    animation: tsDeadlineBorderSpin_' + uid + ' 3s linear infinite !important;\n' +
+'}\n\n' +
+'@keyframes tsDeadlineBorderSpin_' + uid + ' {\n' +
+'    to { transform: rotate(360deg); }\n' +
+'}\n';
+    }
+    if (motion === 'shine'){
+      return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-badge-' + uid + ' {\n' +
+'    position: relative !important;\n' +
+'    overflow: hidden !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-badge-' + uid + '::after {\n' +
+'    content: "" !important;\n' +
+'    position: absolute !important;\n' +
+'    top: 0 !important;\n' +
+'    left: -60% !important;\n' +
+'    width: 40% !important;\n' +
+'    height: 100% !important;\n' +
+'    background: linear-gradient(115deg, transparent, rgba(255,255,255,0.75), transparent) !important;\n' +
+'    animation: tsDeadlineShine_' + uid + ' 2s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsDeadlineShine_' + uid + ' {\n' +
+'    0%   { left: -60%; }\n' +
+'    60%, 100% { left: 130%; }\n' +
+'}\n';
+    }
+    if (motion === 'bounce'){
+      return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-badge-' + uid + ' {\n' +
+'    animation: tsDeadlineBounce_' + uid + ' 1s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsDeadlineBounce_' + uid + ' {\n' +
+'    0%, 100% { transform: translateY(0) scale(1); }\n' +
+'    25%       { transform: translateY(-7px) scale(1.03); }\n' +
+'    50%       { transform: translateY(0) scale(1); }\n' +
+'    70%       { transform: translateY(-3px) scale(1.01); }\n' +
+'    100%      { transform: translateY(0) scale(1); }\n' +
+'}\n';
+    }
+    if (motion === 'flashbg'){
+      var flashColor = mixHex(cardBg || '#0f0f0f', accent, 0.22);
+      return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-card-' + uid + ' {\n' +
+'    animation: tsDeadlineFlashBg_' + uid + ' 1.4s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsDeadlineFlashBg_' + uid + ' {\n' +
+'    0%, 100% { background-color: ' + (cardBg || '#0f0f0f') + '; }\n' +
+'    50%       { background-color: ' + flashColor + '; }\n' +
+'}\n';
+    }
+    if (motion === 'shake'){
+      return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-card-' + uid + ' {\n' +
+'    animation: tsDeadlineShake_' + uid + ' 3.6s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsDeadlineShake_' + uid + ' {\n' +
+'    0%, 90%, 100% { transform: translateX(0); }\n' +
+'    91%  { transform: translateX(-5px); }\n' +
+'    92.5%{ transform: translateX(5px); }\n' +
+'    94%  { transform: translateX(-4px); }\n' +
+'    95.5%{ transform: translateX(4px); }\n' +
+'    97%  { transform: translateX(-2px); }\n' +
+'    98.5%{ transform: translateX(2px); }\n' +
+'}\n';
+    }
+    if (motion === 'hlpulse'){
+      return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-hl-' + uid + ' {\n' +
+'    display: inline-block !important;\n' +
+'    animation: tsDeadlineHlPulse_' + uid + ' 1.1s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsDeadlineHlPulse_' + uid + ' {\n' +
+'    0%, 100% { transform: scale(1); color: #ffd400; }\n' +
+'    50%       { transform: scale(1.14); color: ' + accent + '; }\n' +
+'}\n';
+    }
+    if (motion === 'underline'){
+      return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-hl-' + uid + ' {\n' +
+'    display: inline-block !important;\n' +
+'    padding-bottom: 2px !important;\n' +
+'    background-image: linear-gradient(' + accent + ', ' + accent + ') !important;\n' +
+'    background-repeat: no-repeat !important;\n' +
+'    background-position: 0 100% !important;\n' +
+'    background-size: 0% 3px !important;\n' +
+'    animation: tsDeadlineUnderline_' + uid + ' 1.8s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsDeadlineUnderline_' + uid + ' {\n' +
+'    0%   { background-size: 0% 3px; }\n' +
+'    60%, 100% { background-size: 100% 3px; }\n' +
+'}\n';
+    }
+    return '';
+  }
+
+  // ---------- 게이지 바 스타일 CSS (uid별 애니메이션) ----------
+  function buildGaugeStyleCss(uid, style, accent, cardBg){
+    var fillSel = '#tsDeadlineCardSection_' + uid + ' .ts-deadline-gauge-fill-' + uid;
+    var barSel  = '#tsDeadlineCardSection_' + uid + ' .ts-deadline-gauge-bar-' + uid;
+
+    if (style === 'neon'){
+      var soft = mixHex(accent, '#ffffff', 0.4);
+      return fillSel + ' {\n' +
+'    background: linear-gradient(90deg, ' + accent + ', ' + soft + ') !important;\n' +
+'    animation: tsGaugeNeon_' + uid + ' 1.4s infinite ease-in-out !important;\n' +
+'}\n\n' +
+barSel + ' {\n' +
+'    animation: tsGaugeNeonRing_' + uid + ' 1.4s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsGaugeNeon_' + uid + ' {\n' +
+'    0%, 100% { filter: brightness(1); }\n' +
+'    50%       { filter: brightness(1.35); }\n' +
+'}\n\n' +
+'@keyframes tsGaugeNeonRing_' + uid + ' {\n' +
+'    0%, 100% { box-shadow: 0 0 0 0 ' + accent + '55, inset 0 0 6px 0 ' + accent + '33; }\n' +
+'    50%       { box-shadow: 0 0 18px 3px ' + accent + 'aa, inset 0 0 10px 1px ' + accent + '66; }\n' +
+'}\n';
+    }
+
+    if (style === 'shine'){
+      return fillSel + ' {\n' +
+'    background: ' + accent + ' !important;\n' +
+'}\n\n' +
+fillSel + '::after {\n' +
+'    content: "" !important;\n' +
+'    position: absolute !important;\n' +
+'    top: 0 !important;\n' +
+'    left: -40% !important;\n' +
+'    width: 30% !important;\n' +
+'    height: 100% !important;\n' +
+'    background: linear-gradient(115deg, transparent, rgba(255,255,255,0.85), transparent) !important;\n' +
+'    animation: tsGaugeShine_' + uid + ' 1.5s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsGaugeShine_' + uid + ' {\n' +
+'    0%   { left: -40%; }\n' +
+'    60%, 100% { left: 130%; }\n' +
+'}\n';
+    }
+
+    if (style === 'heartbeat'){
+      return fillSel + ' {\n' +
+'    background: ' + accent + ' !important;\n' +
+'    transform-origin: left center !important;\n' +
+'    animation: tsGaugeHeartbeat_' + uid + ' 1.1s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsGaugeHeartbeat_' + uid + ' {\n' +
+'    0%, 28%, 100% { transform: scaleY(1); box-shadow: 0 0 0 0 ' + accent + '00; }\n' +
+'    14%            { transform: scaleY(1.5); box-shadow: 0 0 12px 2px ' + accent + '99; }\n' +
+'    42%            { transform: scaleY(1.25); box-shadow: 0 0 8px 1px ' + accent + '77; }\n' +
+'}\n';
+    }
+
+    if (style === 'segment'){
+      return fillSel + ' {\n' +
+'    background: repeating-linear-gradient(\n' +
+'        90deg,\n' +
+'        ' + accent + ' 0px,\n' +
+'        ' + accent + ' 14px,\n' +
+'        ' + (cardBg || '#0f0f0f') + ' 14px,\n' +
+'        ' + (cardBg || '#0f0f0f') + ' 18px\n' +
+'    ) !important;\n' +
+'    animation: tsGaugeSegment_' + uid + ' 1.3s infinite ease-in-out !important;\n' +
+'    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 36px), transparent calc(100% - 36px), transparent 100%) !important;\n' +
+'    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 36px), transparent calc(100% - 36px), transparent 100%) !important;\n' +
+'}\n\n' +
+'@keyframes tsGaugeSegment_' + uid + ' {\n' +
+'    0%, 100% { filter: brightness(1); }\n' +
+'    50%       { filter: brightness(1.4); }\n' +
+'}\n';
+    }
+
+    // 'stripe' (기본값): 브라이트니스 펄스 + 대각선 스트라이프 흐름
+    return fillSel + ' {\n' +
+'    background: ' + accent + ' !important;\n' +
+'    animation: tsGaugeStripePulse_' + uid + ' 1.3s infinite ease-in-out !important;\n' +
+'}\n\n' +
+fillSel + '::after {\n' +
+'    content: "" !important;\n' +
+'    position: absolute !important;\n' +
+'    inset: 0 !important;\n' +
+'    background: repeating-linear-gradient(\n' +
+'        135deg,\n' +
+'        rgba(255,255,255,0.35) 0px,\n' +
+'        rgba(255,255,255,0.35) 9px,\n' +
+'        transparent 9px,\n' +
+'        transparent 18px\n' +
+'    ) !important;\n' +
+'    background-size: 50px 100% !important;\n' +
+'    animation: tsGaugeStripeMove_' + uid + ' .9s linear infinite !important;\n' +
+'}\n\n' +
+'@keyframes tsGaugeStripePulse_' + uid + ' {\n' +
+'    0%, 100% { filter: brightness(1); box-shadow: 0 0 0 0 ' + accent + '66; }\n' +
+'    50%       { filter: brightness(1.28); box-shadow: 0 0 14px 2px ' + accent + '99; }\n' +
+'}\n\n' +
+'@keyframes tsGaugeStripeMove_' + uid + ' {\n' +
+'    0%   { background-position: 0 0; }\n' +
+'    100% { background-position: -50px 0; }\n' +
+'}\n';
+  }
+
+  // ---------- 타이머(자정 마감 기준 카운트다운) 스크립트 생성 ----------
+  // 자동 계산 모드: 항상 "오늘 자정(0시)"을 마감으로 계산 (매일 자동 갱신)
+  // 고정 날짜 모드: "종료일 자정(그 날짜가 끝나는 시점 = 다음날 0시)"을 마감으로 계산
+  function computeTimerTotalMs(minutes, seconds, centiseconds){
+    var totalMs = (Math.max(minutes, 0) * 60 + Math.max(seconds, 0)) * 1000 + Math.max(centiseconds, 0) * 10;
+    if (totalMs <= 0) totalMs = 1000;
+    return totalMs;
+  }
+
+  function buildTimerScript(uid, minutes, seconds, centiseconds){
+    var totalMs = computeTimerTotalMs(minutes, seconds, centiseconds);
+
+    return '    function setTsDeadlineTimer_' + uid + '() {\n' +
+'        var elM = document.getElementById("tsDeadlineTimerM_' + uid + '");\n' +
+'        var elS = document.getElementById("tsDeadlineTimerS_' + uid + '");\n' +
+'        var elCS = document.getElementById("tsDeadlineTimerCS_' + uid + '");\n' +
+'        if (!elM || !elS || !elCS) return;\n' +
+'\n' +
+'        var totalMs_' + uid + ' = ' + totalMs + ';\n' +
+'        var startTime_' + uid + ' = Date.now();\n' +
+'\n' +
+'        function pad2_' + uid + '(n) { return (n < 10 ? "0" : "") + n; }\n' +
+'\n' +
+'        function tick_' + uid + '() {\n' +
+'            var elapsed = (Date.now() - startTime_' + uid + ') % totalMs_' + uid + ';\n' +
+'            var remaining = totalMs_' + uid + ' - elapsed;\n' +
+'            var m = Math.floor(remaining / 60000);\n' +
+'            var s = Math.floor((remaining % 60000) / 1000);\n' +
+'            var cs = Math.floor((remaining % 1000) / 10);\n' +
+'            elM.textContent = pad2_' + uid + '(m);\n' +
+'            elS.textContent = pad2_' + uid + '(s);\n' +
+'            elCS.textContent = pad2_' + uid + '(cs);\n' +
+'        }\n' +
+'\n' +
+'        tick_' + uid + '();\n' +
+'        setInterval(tick_' + uid + ', 20);\n' +
+'    }\n';
+  }
+
+  // ---------- 잔여 인원 자동 전환 감시 스크립트: 화면에 타이머가 보이든 안 보이든,
+  //            내부적으로 독립된 시계를 돌려서 설정한 시점에 도달하면 숫자를 바꿔줍니다. ----------
+  function buildViewerDropScript(uid, totalMs, dropOpts){
+    var drop = dropOpts || {};
+    if (!drop.enabled) return '';
+
+    var dropAtMs = Math.max(parseInt(drop.atMs, 10) || 0, 0);
+    var dropCount = Math.max(parseInt(drop.count, 10) || 0, 0);
+    var dropCurrent = Math.max(parseInt(drop.current, 10) || 0, 0);
+    var dropUrgent = !!drop.urgentEnable && dropCount > 0 && dropCount <= (parseInt(drop.urgentThreshold, 10) || 0);
+
+    return '    function setTsDeadlineViewerDrop_' + uid + '() {\n' +
+'        var remainNumEl_' + uid + ' = document.querySelector(".ts-deadline-gauge-remain-num-' + uid + '");\n' +
+'        if (!remainNumEl_' + uid + ') return;\n' +
+'\n' +
+'        var vdTotalMs_' + uid + ' = ' + totalMs + ';\n' +
+'        var vdStartTime_' + uid + ' = Date.now();\n' +
+'\n' +
+'        function vdTick_' + uid + '() {\n' +
+'            var elapsed = (Date.now() - vdStartTime_' + uid + ') % vdTotalMs_' + uid + ';\n' +
+'            var remaining = vdTotalMs_' + uid + ' - elapsed;\n' +
+'            if (remaining > 0 && remaining <= ' + dropAtMs + ') {\n' +
+'                remainNumEl_' + uid + '.textContent = ' + dropCount + ';\n' +
+'                var curNumEl_' + uid + ' = document.querySelector(".ts-deadline-hl-cur-' + uid + '");\n' +
+'                if (curNumEl_' + uid + ') curNumEl_' + uid + '.textContent = ' + dropCurrent + ';\n' +
+(dropUrgent ?
+'                var remainLineEl_' + uid + ' = document.querySelector(".ts-deadline-gauge-remain-' + uid + '");\n' +
+'                if (remainLineEl_' + uid + ') remainLineEl_' + uid + '.classList.add("ts-deadline-urgent-' + uid + '");\n'
+ : '') +
+'                clearInterval(vdInterval_' + uid + ');\n' +
+'            }\n' +
+'        }\n' +
+'\n' +
+'        vdTick_' + uid + '();\n' +
+'        var vdInterval_' + uid + ' = setInterval(vdTick_' + uid + ', 250);\n' +
+'    }\n';
+  }
+
+  // ---------- 잔여 인원 긴급 효과(임계값 이하) CSS 생성: 모션 스타일 선택 가능 ----------
+  function buildUrgentCss(uid, motion, remainNumColor){
+    var lineSel = '#tsDeadlineCardSection_' + uid + ' .ts-deadline-gauge-remain-' + uid + '.ts-deadline-urgent-' + uid;
+    var numSel  = lineSel + ' .ts-deadline-gauge-remain-num-' + uid;
+
+    if (motion === 'pulse'){
+      return lineSel + ' {\n' +
+'    animation: tsUrgentPulse_' + uid + ' .6s infinite ease-in-out !important;\n' +
+'    transform-origin: center !important;\n' +
+'    display: inline-flex !important;\n' +
+'}\n\n' +
+'@keyframes tsUrgentPulse_' + uid + ' {\n' +
+'    0%, 100% { transform: scale(1); }\n' +
+'    50%       { transform: scale(1.08); }\n' +
+'}\n';
+    }
+
+    if (motion === 'heartbeat'){
+      return lineSel + ' {\n' +
+'    animation: tsUrgentHeartbeat_' + uid + ' 1s infinite ease-in-out !important;\n' +
+'    transform-origin: center !important;\n' +
+'    display: inline-flex !important;\n' +
+'}\n\n' +
+numSel + ' {\n' +
+'    animation: tsUrgentHeartbeatGlow_' + uid + ' 1s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsUrgentHeartbeat_' + uid + ' {\n' +
+'    0%, 100% { transform: scale(1); }\n' +
+'    14%       { transform: scale(1.18); }\n' +
+'    28%       { transform: scale(1); }\n' +
+'    42%       { transform: scale(1.12); }\n' +
+'    60%       { transform: scale(1); }\n' +
+'}\n\n' +
+'@keyframes tsUrgentHeartbeatGlow_' + uid + ' {\n' +
+'    0%, 100% { text-shadow: 0 0 0px rgba(255,49,49,0); }\n' +
+'    14%       { text-shadow: 0 0 12px rgba(255,49,49,0.9); }\n' +
+'    28%       { text-shadow: 0 0 0px rgba(255,49,49,0); }\n' +
+'    42%       { text-shadow: 0 0 8px rgba(255,49,49,0.7); }\n' +
+'    60%       { text-shadow: 0 0 0px rgba(255,49,49,0); }\n' +
+'}\n';
+    }
+
+    if (motion === 'glow'){
+      return numSel + ' {\n' +
+'    animation: tsUrgentGlow_' + uid + ' .9s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsUrgentGlow_' + uid + ' {\n' +
+'    0%, 100% { text-shadow: 0 0 0px rgba(255,49,49,0); }\n' +
+'    50%       { text-shadow: 0 0 10px rgba(255,49,49,0.9), 0 0 20px rgba(255,49,49,0.5); }\n' +
+'}\n';
+    }
+
+    if (motion === 'blink'){
+      return lineSel + ' {\n' +
+'    animation: tsUrgentBlink_' + uid + ' .9s infinite !important;\n' +
+'}\n\n' +
+'@keyframes tsUrgentBlink_' + uid + ' {\n' +
+'    0%, 100% { opacity: 1; }\n' +
+'    50%       { opacity: 0.35; }\n' +
+'}\n';
+    }
+
+    if (motion === 'bounce'){
+      return lineSel + ' {\n' +
+'    animation: tsUrgentBounce_' + uid + ' .6s infinite ease-in-out !important;\n' +
+'    display: inline-flex !important;\n' +
+'}\n\n' +
+'@keyframes tsUrgentBounce_' + uid + ' {\n' +
+'    0%, 100% { transform: translateY(0); }\n' +
+'    50%       { transform: translateY(-4px); }\n' +
+'}\n';
+    }
+
+    if (motion === 'colorpulse'){
+      return numSel + ' {\n' +
+'    animation: tsUrgentColorPulse_' + uid + ' .9s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsUrgentColorPulse_' + uid + ' {\n' +
+'    0%, 100% { color: ' + remainNumColor + ' !important; }\n' +
+'    50%       { color: #ff3131 !important; }\n' +
+'}\n';
+    }
+
+    // 기본값: shake (좌우 흔들림)
+    return lineSel + ' {\n' +
+'    animation: tsUrgentShake_' + uid + ' .35s ease-in-out infinite !important;\n' +
+'}\n\n' +
+'@keyframes tsUrgentShake_' + uid + ' {\n' +
+'    0%, 100% { transform: translateX(0); }\n' +
+'    20%       { transform: translateX(-2px); }\n' +
+'    40%       { transform: translateX(2px); }\n' +
+'    60%       { transform: translateX(-2px); }\n' +
+'    80%       { transform: translateX(2px); }\n' +
+'}\n';
+  }
+
+  // ---------- 카드 HTML/CSS 생성 (uid로 클래스/ID/키프레임 접미사 부여) ----------
+  function buildCard(uid, forOutput){
+    var v = {
+      title: fields.title.value || '접수 마감 기한',
+      badge: fields.badge.value || '곧 선착순 종료',
+      highlight: fields.highlight.value || '',
+      line1: fields.line1.value || '',
+      line2: fields.line2.value || '',
+      gaugeEnable: fields.gaugeEnable.checked,
+      deadlineEnable: fields.deadlineEnable.checked,
+      gaugeStyle: fields.gaugeStyle.value || 'segment',
+      gaugeCurrent: parseInt(fields.gaugeCurrent.value, 10) || 0,
+      gaugeMax: Math.max(parseInt(fields.gaugeMax.value, 10) || 0, 1),
+      timerEnable: fields.timerEnable.checked,
+      timerMinutes: parseInt(fields.timerMinutes.value, 10) || 0,
+      timerSeconds: parseInt(fields.timerSeconds.value, 10) || 0,
+      timerCentiseconds: parseInt(fields.timerCentiseconds.value, 10) || 0,
+      accent: fields.accentColorText.value || '#ff3b3b',
+      sectionBg: fields.sectionBgText.value || '#000000',
+      cardBg: fields.cardBgText.value || '#0f0f0f',
+      textColor: fields.textColorText.value || '#ffffff',
+      remainNumColor: fields.remainNumColorText.value || '#FFE600',
+      remainCopy: fields.remainCopy.value || '마지막 {count}명 남았습니다',
+      urgentEnable: fields.urgentEnable.checked,
+      urgentThreshold: Math.max(parseInt(fields.urgentThreshold.value, 10) || 3, 1),
+      urgentMotion: fields.urgentMotion.value || 'glow',
+      fontKey: fields.font.value || 'pretendard',
+      scale: (parseInt(fields.textScale.value, 10) || 100) / 100,
+      motion: fields.motion.value || 'arrow',
+      arrowStyle: fields.arrowStyle.value || 'blink',
+      gaugeMarginTop: parseFloat(fields.gaugeMarginTop.value) || 14.7,
+      gaugeMarginBottom: parseFloat(fields.gaugeMarginBottom.value) || 12.3,
+      gaugeWidth: parseFloat(fields.gaugeWidth.value) || 204,
+      gaugeHeight: parseFloat(fields.gaugeHeight.value) || 10.8,
+      timerScale: (parseInt(fields.timerScale.value, 10) || 75) / 100,
+      dateScale: (parseInt(fields.dateScale.value, 10) || 100) / 100,
+      badgeScale: (parseInt(fields.badgeScale.value, 10) || 95) / 100,
+      badgeStyle: fields.badgeStyle.value || 'pill',
+      highlightScale: (parseInt(fields.highlightScale.value, 10) || 120) / 100,
+      titleScale: (parseInt(fields.titleScale.value, 10) || 100) / 100,
+      titlePosY: parseFloat(fields.titlePosY.value) || 0,
+      datePosY: parseFloat(fields.datePosY.value) || 0,
+      badgePosY: parseFloat(fields.badgePosY.value) || 0,
+      highlightPosY: parseFloat(fields.highlightPosY.value) || 0,
+      timerPosY: parseFloat(fields.timerPosY.value) || 0,
+      line1Scale: (parseInt(fields.line1Scale.value, 10) || 100) / 100,
+      line1PosY: parseFloat(fields.line1PosY.value) || 0,
+      line2Scale: (parseInt(fields.line2Scale.value, 10) || 100) / 100,
+      line2PosY: parseFloat(fields.line2PosY.value) || 0,
+      gaugeRemainScale: (parseInt(fields.gaugeRemainScale.value, 10) || 100) / 100,
+      gaugeRemainPosY: parseFloat(fields.gaugeRemainPosY.value) || 0,
+      viewerDropEnable: fields.viewerDropEnable.checked,
+      viewerDropMin: Math.max(parseInt(fields.viewerDropMin.value, 10) || 0, 0),
+      viewerDropSec: Math.max(parseInt(fields.viewerDropSec.value, 10) || 0, 0),
+      viewerDropCount: Math.max(parseInt(fields.viewerDropCount.value, 10) || 0, 0),
+      viewerDropCurrent: Math.max(parseInt(fields.viewerDropCurrent.value, 10) || 0, 0)
+    };
+    var cardIsLight = isLightHex(v.cardBg);
+    var sectionIsLight = isLightHex(v.sectionBg);
+    v.overlayBorder = cardIsLight ? 'rgba(0, 0, 0, 0.14)' : 'rgba(255, 255, 255, 0.1)';
+    v.overlayTrack = cardIsLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.16)';
+    v.overlayTileBg = cardIsLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.06)';
+    v.overlayTileBorder = cardIsLight ? 'rgba(0, 0, 0, 0.14)' : 'rgba(255, 255, 255, 0.14)';
+    v.titleMuted = cardIsLight ? '#6b6b6b' : '#a8a8a8';
+    v.cardShadowRule = sectionIsLight ? 'none' : '0 12px 34px rgba(0, 0, 0, 0.72)';
+    var fontStack = FONT_OPTIONS[v.fontKey].stack;
+    var mode = getDateMode();
+    var gaugePercent = Math.max(0, Math.min(100, Math.round((v.gaugeCurrent / v.gaugeMax) * 100)));
+    var gaugeRemain = Math.max(v.gaugeMax - v.gaugeCurrent, 0);
+    // 잔여 인원이 임계값 이하로 떨어지면 긴급 효과(펄스+글로우/흔들림/깜빡이는 배지/카드 테두리 글로우) 자동 발동
+    var isUrgent = v.urgentEnable && gaugeRemain > 0 && gaugeRemain <= v.urgentThreshold;
+
+    // 잔여 인원 카피: {count} 자리에 남은 인원 숫자를 강조 span으로 삽입
+    var remainHtml;
+    if (v.remainCopy.indexOf('{count}') !== -1){
+      var rcParts = v.remainCopy.split('{count}');
+      remainHtml = escHtml(rcParts[0]) +
+        '<span class="ts-deadline-gauge-remain-num-' + uid + '">' + gaugeRemain + '</span>' +
+        escHtml(rcParts.slice(1).join('{count}'));
+    } else {
+      remainHtml = escHtml(v.remainCopy) + ' <span class="ts-deadline-gauge-remain-num-' + uid + '">' + gaugeRemain + '명</span>';
+    }
+
+
+    var dateInnerHtml, dateScript;
+    if (mode === 'fixed'){
+      var info = buildDateHtml(uid);
+      dateInnerHtml = escHtml(info.staticText) +
+        '<span class="ts-deadline-red-' + uid + '">' + escHtml(info.redText) + '</span>' +
+        '<span class="ts-deadline-until-' + uid + '">까지</span>';
+      dateScript = '';
+    } else {
+      dateInnerHtml = ''; // JS가 채움
+      var daysAgo = parseInt(fields.daysAgo.value, 10) || 0;
+      dateScript =
+'    function setTsDeadlineDate_' + uid + '() {\n' +
+'        var target = document.getElementById("tsDeadlineDateText_' + uid + '");\n' +
+'        if (!target) return;\n' +
+'\n' +
+'        var now = new Date();\n' +
+'        var days = ["일", "월", "화", "수", "목", "금", "토"];\n' +
+'\n' +
+'        var startObj = new Date(now.getTime());\n' +
+'        startObj.setDate(now.getDate() - ' + daysAgo + ');\n' +
+'\n' +
+'        var startMonth = startObj.getMonth() + 1;\n' +
+'        var startDate  = startObj.getDate();\n' +
+'        var startDay   = days[startObj.getDay()];\n' +
+'\n' +
+'        var endMonth = now.getMonth() + 1;\n' +
+'        var endDate  = now.getDate();\n' +
+'        var endDay   = days[now.getDay()];\n' +
+'\n' +
+'        var frag = document.createDocumentFragment();\n' +
+'\n' +
+'        var startText = document.createTextNode(\n' +
+'            startMonth + "/" + startDate + "(" + startDay + ") ~ "\n' +
+'        );\n' +
+'        frag.appendChild(startText);\n' +
+'\n' +
+'        var redSpan = document.createElement("span");\n' +
+'        redSpan.className = "ts-deadline-red-' + uid + '";\n' +
+'        redSpan.textContent = endMonth + "/" + endDate + "(" + endDay + ")";\n' +
+'        frag.appendChild(redSpan);\n' +
+'\n' +
+'        var untilSpan = document.createElement("span");\n' +
+'        untilSpan.className = "ts-deadline-until-' + uid + '";\n' +
+'        untilSpan.textContent = "까지";\n' +
+'        frag.appendChild(untilSpan);\n' +
+'\n' +
+'        target.appendChild(frag);\n' +
+'    }\n';
+    }
+
+    var html =
+'<section id="tsDeadlineCardSection_' + uid + '">\n' +
+'    <div class="ts-deadline-card-' + uid + '">\n' +
+(v.deadlineEnable ?
+'        <div class="ts-deadline-title-' + uid + '">' + escHtml(v.title) + '</div>\n' +
+'        <div class="ts-deadline-date-' + uid + '" id="tsDeadlineDateText_' + uid + '">' + (mode==='fixed' ? dateInnerHtml : '') + '</div>\n' +
+'        <div class="ts-deadline-divider-' + uid + '"></div>\n'
+ : '') +
+'        <div class="ts-deadline-text-' + uid + '">\n' +
+'            <span class="ts-deadline-badge-' + uid + '">' + escHtml(v.badge) + '</span>\n' +
+(v.timerEnable ?
+'            <div class="ts-deadline-timer-wrap-' + uid + '">\n' +
+'                <div class="ts-deadline-timer-row-' + uid + '">\n' +
+'                    <span class="ts-deadline-timer-box-' + uid + '"><span class="ts-deadline-timer-num-' + uid + '" id="tsDeadlineTimerM_' + uid + '">00</span></span>\n' +
+'                    <span class="ts-deadline-timer-colon-' + uid + '">:</span>\n' +
+'                    <span class="ts-deadline-timer-box-' + uid + '"><span class="ts-deadline-timer-num-' + uid + '" id="tsDeadlineTimerS_' + uid + '">00</span></span>\n' +
+'                    <span class="ts-deadline-timer-colon-' + uid + '">:</span>\n' +
+'                    <span class="ts-deadline-timer-box-' + uid + '"><span class="ts-deadline-timer-num-' + uid + '" id="tsDeadlineTimerCS_' + uid + '">00</span></span>\n' +
+'                </div>\n' +
+'            </div>\n'
+ : '') +
+(v.highlight ? '            <div class="ts-deadline-line-' + uid + ' ts-deadline-line-top-' + uid + '">\n                <span style="font-weight: 900 !important; font-size: calc(' + scaleClamp(19, 5.4, 23, v.scale) + ' * ' + v.highlightScale + ') !important; position: relative !important; top: ' + v.highlightPosY + 'px !important;">' + escHighlight(v.highlight, uid, 'ts-deadline-hl-cur-' + uid) + '</span>\n            </div>\n' : '') +
+'            <div class="ts-deadline-gauge-wrap-' + uid + '">\n' +
+(v.gaugeEnable ?
+'                <div class="ts-deadline-gauge-bar-' + uid + '">\n' +
+'                    <div class="ts-deadline-gauge-fill-' + uid + '" style="width:' + gaugePercent + '%;"></div>\n' +
+'                </div>\n'
+ : '') +
+'                <div class="ts-deadline-gauge-remain-' + uid + (isUrgent ? ' ts-deadline-urgent-' + uid : '') + '">' + remainHtml + '</div>\n' +
+'            </div>\n' +
+(v.line1 ? '            <div class="ts-deadline-line-' + uid + ' ts-deadline-line-bottom-' + uid + ' ts-deadline-line1-' + uid + '">\n                <span>' + escHighlight(v.line1, uid) + '</span>\n            </div>\n' : '') +
+(v.line2 ? '            <div class="ts-deadline-line-' + uid + ' ts-deadline-line-bottom-' + uid + ' ts-deadline-line2-' + uid + '">\n                <span>' + escHighlight(v.line2, uid) + '</span>\n            </div>\n' : '') +
+'        </div>\n' +
+buildMotionHtml(uid, v.motion) +
+'    </div>\n' +
+'</section>';
+
+    var css =
+'#tsDeadlineCardSection_' + uid + ',\n' +
+'#tsDeadlineCardSection_' + uid + ' * {\n' +
+'    box-sizing: border-box !important;\n' +
+'    font-family: ' + fontStack + ' !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' {\n' +
+'    width: 100% !important;\n' +
+'    max-width: 100% !important;\n' +
+'    margin: 0 auto !important;\n' +
+'    padding: 22px 12px !important;\n' +
+'    display: flex !important;\n' +
+'    justify-content: center !important;\n' +
+'    align-items: center !important;\n' +
+'    background: ' + v.sectionBg + ' !important;\n' +
+'    position: relative !important;\n' +
+'    z-index: 1 !important;\n' +
+'    margin-bottom: 0 !important;\n' +
+'    overflow: hidden !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-card-' + uid + ' {\n' +
+'    text-align: center !important;\n' +
+'    width: 100% !important;\n' +
+'    max-width: 500px !important;\n' +
+'    margin: 0 auto !important;\n' +
+'    padding: 30px 22px 28px !important;\n' +
+'    background: ' + v.cardBg + ' !important;\n' +
+'    border: 1px solid ' + v.overlayBorder + ' !important;\n' +
+'    border-radius: 18px !important;\n' +
+'    box-shadow: ' + v.cardShadowRule + ' !important;\n' +
+'    overflow: hidden !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-title-' + uid + ' {\n' +
+'    font-size: calc(' + scaleClamp(15, 4.2, 18, v.scale) + ' * ' + v.titleScale + ') !important;\n' +
+'    font-weight: 800 !important;\n' +
+'    color: ' + v.titleMuted + ' !important;\n' +
+'    letter-spacing: 0.06em !important;\n' +
+'    text-transform: uppercase !important;\n' +
+'    margin: 0 0 9px 0 !important;\n' +
+'    line-height: 1.2 !important;\n' +
+'    position: relative !important;\n' +
+'    top: ' + v.titlePosY + 'px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-date-' + uid + ' {\n' +
+'    font-size: calc(' + scaleClamp(27, 7.6, 34, v.scale) + ' * ' + v.dateScale + ') !important;\n' +
+'    font-weight: 900 !important;\n' +
+'    color: ' + v.textColor + ' !important;\n' +
+'    letter-spacing: -0.6px !important;\n' +
+'    line-height: 1.22 !important;\n' +
+'    margin: 0 0 15px 0 !important;\n' +
+'    word-break: keep-all !important;\n' +
+'    position: relative !important;\n' +
+'    top: ' + v.datePosY + 'px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-red-' + uid + ' {\n' +
+'    color: ' + v.accent + ' !important;\n' +
+'    font-weight: 900 !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-until-' + uid + ' {\n' +
+'    color: ' + v.textColor + ' !important;\n' +
+'    font-weight: 900 !important;\n' +
+'    margin-left: 4px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-divider-' + uid + ' {\n' +
+'    width: 46px !important;\n' +
+'    height: 1px !important;\n' +
+'    background-color: transparent !important;\n' +
+'    margin: 13px auto 15px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-text-' + uid + ' {\n' +
+'    display: flex !important;\n' +
+'    flex-direction: column !important;\n' +
+'    align-items: center !important;\n' +
+'    justify-content: center !important;\n' +
+'    gap: 7px !important;\n' +
+'    margin: 0 0 18px 0 !important;\n' +
+'    color: ' + v.textColor + ' !important;\n' +
+'    word-break: keep-all !important;\n' +
+'    text-align: center !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-line-' + uid + ' {\n' +
+'    display: flex !important;\n' +
+'    flex-wrap: wrap !important;\n' +
+'    align-items: center !important;\n' +
+'    justify-content: center !important;\n' +
+'    width: 100% !important;\n' +
+'    max-width: 100% !important;\n' +
+'    line-height: 1.28 !important;\n' +
+'    letter-spacing: -0.6px !important;\n' +
+'    white-space: normal !important;\n' +
+'    word-break: keep-all !important;\n' +
+'    overflow-wrap: break-word !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-line-top-' + uid + ' {\n' +
+'    gap: 7px !important;\n' +
+'    font-size: ' + scaleClamp(19, 5.4, 23, v.scale) + ' !important;\n' +
+'    font-weight: 900 !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-line-bottom-' + uid + ' {\n' +
+'    font-size: ' + scaleClamp(18, 5, 22, v.scale) + ' !important;\n' +
+'    font-weight: 300 !important;\n' +
+'    color: ' + v.textColor + ' !important;\n' +
+'    position: relative !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-line1-' + uid + ' {\n' +
+'    font-size: calc(' + scaleClamp(18, 5, 22, v.scale) + ' * ' + v.line1Scale + ') !important;\n' +
+'    top: ' + v.line1PosY + 'px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-line2-' + uid + ' {\n' +
+'    font-size: calc(' + scaleClamp(18, 5, 22, v.scale) + ' * ' + v.line2Scale + ') !important;\n' +
+'    top: ' + v.line2PosY + 'px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-hl-' + uid + ' {\n' +
+'    color: #ffd400 !important;\n' +
+'    font-weight: 800 !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-gauge-wrap-' + uid + ' {\n' +
+'    width: 100% !important;\n' +
+'    display: flex !important;\n' +
+'    flex-direction: column !important;\n' +
+'    align-items: center !important;\n' +
+'    gap: 7.2px !important;\n' +
+'    margin: ' + v.gaugeMarginTop + 'px 0 ' + v.gaugeMarginBottom + 'px 0 !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-gauge-bar-' + uid + ' {\n' +
+'    width: 100% !important;\n' +
+'    max-width: ' + v.gaugeWidth + 'px !important;\n' +
+'    height: ' + v.gaugeHeight + 'px !important;\n' +
+'    border-radius: 999px !important;\n' +
+'    background: ' + v.overlayTrack + ' !important;\n' +
+'    overflow: hidden !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-gauge-fill-' + uid + ' {\n' +
+'    position: relative !important;\n' +
+'    height: 100% !important;\n' +
+'    border-radius: 999px !important;\n' +
+'    background: ' + v.accent + ' !important;\n' +
+'    overflow: hidden !important;\n' +
+'    transition: width .3s ease !important;\n' +
+'}\n\n' +
+buildGaugeStyleCss(uid, v.gaugeStyle, v.accent, v.cardBg) +
+'\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-gauge-remain-' + uid + ' {\n' +
+'    font-size: calc(' + scaleClamp(20, 5.6, 25, v.scale) + ' * ' + v.gaugeRemainScale + ') !important;\n' +
+'    font-weight: 900 !important;\n' +
+'    color: ' + v.textColor + ' !important;\n' +
+'    letter-spacing: -0.3px !important;\n' +
+'    position: relative !important;\n' +
+'    top: ' + v.gaugeRemainPosY + 'px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-gauge-remain-num-' + uid + ' {\n' +
+'    display: inline-block !important;\n' +
+'    color: ' + v.remainNumColor + ((isUrgent && v.urgentMotion === 'colorpulse') ? '' : ' !important') + ';\n' +
+'    font-weight: 950 !important;\n' +
+'    animation: tsDeadlineGaugeRemainPulse_' + uid + ' 1s infinite ease-in-out !important;\n' +
+'}\n\n' +
+'@keyframes tsDeadlineGaugeRemainPulse_' + uid + ' {\n' +
+'    0%, 100% { transform: scale(1); }\n' +
+'    50%       { transform: scale(1.16); }\n' +
+'}\n\n' +
+(isUrgent ? buildUrgentCss(uid, v.urgentMotion, v.remainNumColor) + '\n' : '') +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-timer-wrap-' + uid + ' {\n' +
+'    display: flex !important;\n' +
+'    flex-direction: column !important;\n' +
+'    align-items: center !important;\n' +
+'    justify-content: center !important;\n' +
+'    width: 100% !important;\n' +
+'    max-width: 100% !important;\n' +
+'    gap: 12px !important;\n' +
+'    margin: 12px 0 16px 0 !important;\n' +
+'    position: relative !important;\n' +
+'    top: ' + v.timerPosY + 'px !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-timer-row-' + uid + ' {\n' +
+'    display: flex !important;\n' +
+'    flex-wrap: wrap !important;\n' +
+'    align-items: center !important;\n' +
+'    justify-content: center !important;\n' +
+'    width: 100% !important;\n' +
+'    max-width: 100% !important;\n' +
+'    row-gap: 8px !important;\n' +
+'    column-gap: clamp(4px, 2vw, 8px) !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-timer-box-' + uid + ' {\n' +
+'    display: inline-flex !important;\n' +
+'    align-items: center !important;\n' +
+'    justify-content: center !important;\n' +
+'    min-width: 2.2em !important;\n' +
+'    padding: clamp(5px, 2vw, 8px) clamp(8px, 3.5vw, 15px) !important;\n' +
+'    background: ' + v.overlayTileBg + ' !important;\n' +
+'    border: 1px solid ' + v.overlayTileBorder + ' !important;\n' +
+'    border-radius: 12px !important;\n' +
+'    box-sizing: border-box !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-timer-num-' + uid + ' {\n' +
+'    font-family: \'SFMono-Regular\', Consolas, \'Liberation Mono\', Menlo, monospace !important;\n' +
+'    font-size: calc(' + scaleClamp(38, 10.5, 45, v.scale) + ' * ' + v.timerScale + ') !important;\n' +
+'    font-weight: 900 !important;\n' +
+'    line-height: 1 !important;\n' +
+'    color: ' + v.remainNumColor + ' !important;\n' +
+'    letter-spacing: -0.3px !important;\n' +
+'    font-variant-numeric: tabular-nums !important;\n' +
+'}\n\n' +
+'#tsDeadlineCardSection_' + uid + ' .ts-deadline-timer-colon-' + uid + ' {\n' +
+'    font-family: \'SFMono-Regular\', Consolas, \'Liberation Mono\', Menlo, monospace !important;\n' +
+'    font-size: calc(' + scaleClamp(38, 10.5, 45, v.scale) + ' * ' + v.timerScale + ') !important;\n' +
+'    font-weight: 900 !important;\n' +
+'    line-height: 1 !important;\n' +
+'    color: ' + v.remainNumColor + ' !important;\n' +
+'    flex: 0 0 auto !important;\n' +
+'}\n\n' +
+(function(){
+  var shape = getBadgeShape(v.badgeStyle);
+  return '#tsDeadlineCardSection_' + uid + ' .ts-deadline-badge-' + uid + ' {\n' +
+'    display: inline-flex !important;\n' +
+'    align-items: center !important;\n' +
+'    justify-content: center !important;\n' +
+'    background-color: ' + v.accent + ' !important;\n' +
+'    color: #ffffff !important;\n' +
+'    font-size: calc(' + scaleClamp(16, 4.6, 19, v.scale) + ' * ' + v.badgeScale + ') !important;\n' +
+'    font-weight: 950 !important;\n' +
+'    padding: 6px ' + shape.padH + ' !important;\n' +
+'    border-radius: ' + shape.radius + ' !important;\n' +
+(shape.clip !== 'none' ? '    clip-path: ' + shape.clip + ' !important;\n' : '') +
+'    letter-spacing: -0.3px !important;\n' +
+'    line-height: 1 !important;\n' +
+'    flex: 0 0 auto !important;\n' +
+'    position: relative !important;\n' +
+'    top: ' + v.badgePosY + 'px !important;\n' +
+'}\n\n';
+})() +
+buildMotionCss(uid, v.motion, v.accent, v.cardBg, v.arrowStyle) +
+'\n' +
+'@media (max-width: 390px) {\n' +
+'    #tsDeadlineCardSection_' + uid + ' .ts-deadline-card-' + uid + ' {\n' +
+'        max-width: 100% !important;\n' +
+'        padding: 28px 16px 25px !important;\n' +
+'    }\n' +
+'}\n\n' +
+'@media (max-width: 360px) {\n' +
+'    #tsDeadlineCardSection_' + uid + ' {\n' +
+'        padding: 18px 10px !important;\n' +
+'    }\n' +
+'    #tsDeadlineCardSection_' + uid + ' .ts-deadline-card-' + uid + ' {\n' +
+'        padding: 24px 14px 22px !important;\n' +
+'        border-radius: 16px !important;\n' +
+'    }\n' +
+'    #tsDeadlineCardSection_' + uid + ' .ts-deadline-line-top-' + uid + ' {\n' +
+'        gap: 5px !important;\n' +
+'    }\n' +
+'    #tsDeadlineCardSection_' + uid + ' .ts-deadline-badge-' + uid + ' {\n' +
+'        padding: 5px 9px !important;\n' +
+'    }\n' +
+'    #tsDeadlineCardSection_' + uid + ' .ts-deadline-tri-' + uid + ' {\n' +
+'        border-left-width: 11px !important;\n' +
+'        border-right-width: 11px !important;\n' +
+'        border-top-width: 17px !important;\n' +
+'    }\n' +
+'}\n\n' +
+'@media (max-width: 340px) {\n' +
+'    #tsDeadlineCardSection_' + uid + ' .ts-deadline-timer-row-' + uid + ' {\n' +
+'        column-gap: 4px !important;\n' +
+'    }\n' +
+'}';
+
+    var timerTotalMs = computeTimerTotalMs(v.timerMinutes, v.timerSeconds, v.timerCentiseconds);
+    var timerScript = v.timerEnable ? buildTimerScript(uid, v.timerMinutes, v.timerSeconds, v.timerCentiseconds) : '';
+    var viewerDropScript = v.viewerDropEnable ? buildViewerDropScript(uid, timerTotalMs, {
+      enabled: v.viewerDropEnable,
+      atMs: (v.viewerDropMin * 60 + v.viewerDropSec) * 1000,
+      count: v.viewerDropCount,
+      current: v.viewerDropCurrent,
+      urgentEnable: v.urgentEnable,
+      urgentThreshold: v.urgentThreshold
+    }) : '';
+
+    var script = '';
+    if (mode === 'auto' || v.timerEnable || v.viewerDropEnable){
+      script =
+'<script>\n' +
+'    (function () {\n' +
+'        "use strict";\n' +
+'\n' +
+(mode === 'auto' ? dateScript + '\n' : '') +
+(v.timerEnable ? timerScript + '\n' : '') +
+(v.viewerDropEnable ? viewerDropScript + '\n' : '') +
+'        function tsDeadlineInit_' + uid + '() {\n' +
+(mode === 'auto' ? '            setTsDeadlineDate_' + uid + '();\n' : '') +
+(v.timerEnable ? '            setTsDeadlineTimer_' + uid + '();\n' : '') +
+(v.viewerDropEnable ? '            setTsDeadlineViewerDrop_' + uid + '();\n' : '') +
+'        }\n' +
+'\n' +
+'        if (document.readyState === "loading") {\n' +
+'            document.addEventListener("DOMContentLoaded", tsDeadlineInit_' + uid + ');\n' +
+'        } else {\n' +
+'            tsDeadlineInit_' + uid + '();\n' +
+'        }\n' +
+'    })();\n' +
+'<\/script>';
+    }
+
+    var fontHead = FONT_OPTIONS[v.fontKey].head;
+    var full = (fontHead ? (fontHead + '\n\n') : '') +
+      html + '\n\n<style>\n' + css + '\n</style>' + (script ? ('\n\n' + script) : '');
+
+    return { html: html, css: css, script: script, full: full };
+  }
+
+  function render(){
+    loadFontForPreview(fields.font.value);
+    var built = buildCard(previewUid, false);
+
+    // 미리보기 삽입 (기존 스타일 제거 후 재삽입)
+    var mount = $('previewMount');
+    var oldStyle = document.getElementById('previewStyle');
+    if (oldStyle) oldStyle.remove();
+    var styleTag = document.createElement('style');
+    styleTag.id = 'previewStyle';
+    styleTag.textContent = built.css;
+    document.head.appendChild(styleTag);
+    mount.innerHTML = built.html;
+
+    if (getDateMode() === 'auto'){
+      // 미리보기에서는 즉시 함수 실행 (스크립트 태그 재실행이 안되므로 직접 호출)
+      var uid = previewUid;
+      var target = document.getElementById('tsDeadlineDateText_' + uid);
+      if (target){
+        target.innerHTML = '';
+        var now = new Date();
+        var days = ["일","월","화","수","목","금","토"];
+        var daysAgo = parseInt(fields.daysAgo.value, 10) || 0;
+        var startObj = new Date(now.getTime());
+        startObj.setDate(now.getDate() - daysAgo);
+        var startText = document.createTextNode(
+          (startObj.getMonth()+1) + '/' + startObj.getDate() + '(' + days[startObj.getDay()] + ') ~ '
+        );
+        target.appendChild(startText);
+        var redSpan = document.createElement('span');
+        redSpan.className = 'ts-deadline-red-' + uid;
+        redSpan.textContent = (now.getMonth()+1) + '/' + now.getDate() + '(' + days[now.getDay()] + ')';
+        target.appendChild(redSpan);
+        var untilSpan = document.createElement('span');
+        untilSpan.className = 'ts-deadline-until-' + uid;
+        untilSpan.textContent = '까지';
+        target.appendChild(untilSpan);
+      }
+    }
+
+    if (fields.timerEnable.checked){
+      startPreviewTimer(previewUid);
+    } else {
+      stopPreviewTimer();
+    }
+
+    if (fields.viewerDropEnable.checked){
+      startViewerDropPreview(previewUid);
+    } else {
+      stopViewerDropPreview();
+    }
+
+    // 실제 배포용 코드는 매번 새 uid로 생성 (복사할 때마다 고유화)
+    var outputUid = randUid();
+    var outputBuilt = buildCard(outputUid, true);
+    $('outputCode').value =
+      '<!-- 접수 마감 기한 카드 — 티스토리 위젯 (자동 생성, 다른 위젯과 충돌 방지 처리됨) -->\n' +
+      outputBuilt.full;
+  }
+
+  function doCopyCode(){
+    var ta = $('outputCode');
+    ta.select();
+    ta.setSelectionRange(0, 999999);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch(e){ ok = false; }
+    if (!ok && navigator.clipboard){
+      navigator.clipboard.writeText(ta.value);
+    }
+  }
+
+  // ---------- 초기화 (기본값 복원) ----------
+  var DEFAULTS = {
+    title: '접수 마감 기한',
+    badge: '곧 선착순 종료',
+    highlight: '현재 [[47]] / 50명 신청 완료',
+    line1: '',
+    line2: '',
+    gaugeEnable: true,
+    deadlineEnable: false,
+    timerEnable: false,
+    timerMinutes: '10',
+    timerSeconds: '1',
+    timerCentiseconds: '32',
+    gaugeStyle: 'segment',
+    gaugeCurrent: '47',
+    gaugeMax: '50',
+    dateMode: 'auto',
+    daysAgo: '3',
+    startDate: '',
+    endDate: '',
+    accentColor: '#ff3b3b',
+    sectionBg: '#000000',
+    cardBg: '#0f0f0f',
+    textColor: '#ffffff',
+    remainNumColor: '#FFE600',
+    remainCopy: '마지막 {count}명 남았습니다',
+    urgentEnable: true,
+    urgentThreshold: '3',
+    urgentMotion: 'glow',
+    font: 'pretendard',
+    textScale: '123',
+    motion: 'arrow',
+    arrowStyle: 'blink',
+    gaugeMarginTop: '18.2',
+    gaugeMarginBottom: '12.3',
+    gaugeWidth: '381',
+    gaugeHeight: '19.9',
+    timerScale: '100',
+    dateScale: '100',
+    badgeScale: '140',
+    badgeStyle: 'pill',
+    highlightScale: '150',
+    titleScale: '100',
+    titlePosY: '0',
+    datePosY: '0',
+    badgePosY: '-10',
+    highlightPosY: '0',
+    timerPosY: '0',
+    line1Scale: '100',
+    line1PosY: '0',
+    line2Scale: '100',
+    line2PosY: '0',
+    gaugeRemainScale: '140',
+    gaugeRemainPosY: '10',
+    viewerDropEnable: true,
+    viewerDropMin: '9',
+    viewerDropSec: '20',
+    viewerDropCount: '2',
+    viewerDropCurrent: '48'
+  };
+
+  function doReset(){
+    if (!window.confirm('모든 설정을 기본값으로 되돌릴까요?\n입력한 내용은 복구되지 않습니다.')) return;
+
+    fields.title.value = DEFAULTS.title;
+    fields.badge.value = DEFAULTS.badge;
+    fields.badgeStyle.value = DEFAULTS.badgeStyle;
+    badgeStyleTabs.forEach(function(t){
+      t.classList.toggle('active', t.getAttribute('data-style') === DEFAULTS.badgeStyle);
+    });
+    fields.highlight.value = DEFAULTS.highlight;
+    fields.line1.value = DEFAULTS.line1;
+    fields.line2.value = DEFAULTS.line2;
+    fields.gaugeEnable.checked = DEFAULTS.gaugeEnable;
+    fields.deadlineEnable.checked = DEFAULTS.deadlineEnable;
+    fields.timerEnable.checked = DEFAULTS.timerEnable;
+    fields.timerMinutes.value = DEFAULTS.timerMinutes;
+    fields.timerSeconds.value = DEFAULTS.timerSeconds;
+    fields.timerCentiseconds.value = DEFAULTS.timerCentiseconds;
+    fields.gaugeStyle.value = DEFAULTS.gaugeStyle;
+    gaugeStyleTabs.forEach(function(t){
+      t.classList.toggle('active', t.getAttribute('data-style') === DEFAULTS.gaugeStyle);
+    });
+    fields.gaugeCurrent.value = DEFAULTS.gaugeCurrent;
+    fields.gaugeMax.value = DEFAULTS.gaugeMax;
+    fields.remainCopy.value = DEFAULTS.remainCopy;
+    fields.urgentEnable.checked = DEFAULTS.urgentEnable;
+    fields.urgentThreshold.value = DEFAULTS.urgentThreshold;
+    fields.urgentMotion.value = DEFAULTS.urgentMotion;
+
+    for (var i=0; i<radios.length; i++){
+      radios[i].checked = (radios[i].value === DEFAULTS.dateMode);
+    }
+    dateAutoBox.style.display = '';
+    dateFixedBox.style.display = 'none';
+    fields.daysAgo.value = DEFAULTS.daysAgo;
+    fields.startDate.value = DEFAULTS.startDate;
+    fields.endDate.value = DEFAULTS.endDate;
+
+    fields.accentColor.value = DEFAULTS.accentColor;
+    fields.accentColorText.value = DEFAULTS.accentColor;
+    fields.sectionBg.value = DEFAULTS.sectionBg;
+    fields.sectionBgText.value = DEFAULTS.sectionBg;
+    fields.cardBg.value = DEFAULTS.cardBg;
+    fields.cardBgText.value = DEFAULTS.cardBg;
+    fields.textColor.value = DEFAULTS.textColor;
+    fields.textColorText.value = DEFAULTS.textColor;
+    fields.remainNumColor.value = DEFAULTS.remainNumColor;
+    fields.remainNumColorText.value = DEFAULTS.remainNumColor;
+    $('themeDarkBtn').classList.add('active');
+    $('themeLightBtn').classList.remove('active');
+
+    fields.font.value = DEFAULTS.font;
+    loadFontForPreview(DEFAULTS.font);
+    setMasterScale(DEFAULTS.textScale, false);
+    fields.motion.value = DEFAULTS.motion;
+    fields.arrowStyle.value = DEFAULTS.arrowStyle;
+    arrowStyleBox.style.display = (DEFAULTS.motion === 'arrow') ? '' : 'none';
+    fields.gaugeMarginTop.value = DEFAULTS.gaugeMarginTop;
+    $('gaugeMarginTopVal').textContent = DEFAULTS.gaugeMarginTop;
+    fields.gaugeMarginBottom.value = DEFAULTS.gaugeMarginBottom;
+    $('gaugeMarginBottomVal').textContent = DEFAULTS.gaugeMarginBottom;
+    fields.gaugeWidth.value = DEFAULTS.gaugeWidth;
+    $('gaugeWidthVal').textContent = DEFAULTS.gaugeWidth;
+    fields.gaugeHeight.value = DEFAULTS.gaugeHeight;
+    $('gaugeHeightVal').textContent = DEFAULTS.gaugeHeight;
+    fields.timerScale.value = DEFAULTS.timerScale;
+    $('timerScaleVal').textContent = DEFAULTS.timerScale + '%';
+    fields.dateScale.value = DEFAULTS.dateScale;
+    $('dateScaleVal').textContent = DEFAULTS.dateScale + '%';
+    fields.badgeScale.value = DEFAULTS.badgeScale;
+    $('badgeScaleVal').textContent = DEFAULTS.badgeScale + '%';
+    fields.highlightScale.value = DEFAULTS.highlightScale;
+    $('highlightScaleVal').textContent = DEFAULTS.highlightScale + '%';
+
+    fields.titleScale.value = DEFAULTS.titleScale;
+    $('titleScaleVal').textContent = DEFAULTS.titleScale + '%';
+    fields.titlePosY.value = DEFAULTS.titlePosY;
+    $('titlePosYVal').textContent = '0px';
+    fields.datePosY.value = DEFAULTS.datePosY;
+    $('datePosYVal').textContent = '0px';
+    fields.badgePosY.value = DEFAULTS.badgePosY;
+    $('badgePosYVal').textContent = '-10px';
+    fields.highlightPosY.value = DEFAULTS.highlightPosY;
+    $('highlightPosYVal').textContent = '0px';
+    fields.timerPosY.value = DEFAULTS.timerPosY;
+    $('timerPosYVal').textContent = '0px';
+    fields.line1Scale.value = DEFAULTS.line1Scale;
+    $('line1ScaleVal').textContent = DEFAULTS.line1Scale + '%';
+    fields.line1PosY.value = DEFAULTS.line1PosY;
+    $('line1PosYVal').textContent = '0px';
+    fields.line2Scale.value = DEFAULTS.line2Scale;
+    $('line2ScaleVal').textContent = DEFAULTS.line2Scale + '%';
+    fields.line2PosY.value = DEFAULTS.line2PosY;
+    $('line2PosYVal').textContent = '0px';
+    fields.gaugeRemainScale.value = DEFAULTS.gaugeRemainScale;
+    $('gaugeRemainScaleVal').textContent = DEFAULTS.gaugeRemainScale + '%';
+    fields.gaugeRemainPosY.value = DEFAULTS.gaugeRemainPosY;
+    $('gaugeRemainPosYVal').textContent = '+10px';
+    fields.viewerDropEnable.checked = DEFAULTS.viewerDropEnable;
+    fields.viewerDropMin.value = DEFAULTS.viewerDropMin;
+    fields.viewerDropSec.value = DEFAULTS.viewerDropSec;
+    fields.viewerDropCount.value = DEFAULTS.viewerDropCount;
+    fields.viewerDropCurrent.value = DEFAULTS.viewerDropCurrent;
+
+    render();
+  }
+
+  $('resetBtn').addEventListener('click', doReset);
+  $('quickResetBtn').addEventListener('click', doReset);
+
+  $('quickCopyBtn').addEventListener('click', function(){
+    doCopyCode();
+    var btn = $('quickCopyBtn');
+    var originalHtml = btn.innerHTML;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 복사됨!';
+    btn.classList.add('copied');
+    btn.title = '복사됨!';
+    setTimeout(function(){
+      btn.innerHTML = originalHtml;
+      btn.classList.remove('copied');
+      btn.title = '생성된 코드 복사';
+    }, 1200);
+  });
+
+  setMasterScale(fields.textScale.value, false);
+  render();
+})();
+</script>
+
+</body>
+</html>

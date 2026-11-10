@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>확장자 일괄 변환기 → .txt</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --paper:#f6f3ec;
+    --ink:#2b2a28;
+    --ink-soft:#6b6660;
+    --rule:#d8d2c4;
+    --accent:#3a5a40; /* 잉크 그린 - 도장/스탬프 느낌 */
+    --accent-soft:#eef2ea;
+    --danger:#a33d3d;
+    --mono: 'SFMono-Regular', 'Consolas', 'Menlo', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--paper);
+    color:var(--ink);
+    font-family: 'Georgia', 'Iowan Old Style', serif;
+    display:flex;
+    justify-content:center;
+    padding:48px 20px 80px;
+  }
+  .sheet{
+    width:100%;
+    max-width:720px;
+  }
+  header{
+    margin-bottom:28px;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:18px;
+  }
+  .stamp{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family: var(--mono);
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    border:1px solid var(--accent);
+    padding:3px 8px;
+    border-radius:2px;
+    margin-bottom:14px;
+  }
+  h1{
+    margin:0 0 6px;
+    font-size:30px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:14.5px;
+    line-height:1.5;
+  }
+  .dropzone{
+    border:2px dashed var(--rule);
+    border-radius:6px;
+    padding:40px 20px;
+    text-align:center;
+    background:#fff;
+    cursor:pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .dropzone.dragover{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+  }
+  .dropzone .big{
+    font-size:16px;
+    margin-bottom:4px;
+  }
+  .dropzone .small{
+    font-size:13px;
+    color:var(--ink-soft);
+    font-family: var(--mono);
+  }
+  input[type=file]{display:none;}
+
+  .filelist{
+    margin-top:22px;
+  }
+  .filelist-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-family: var(--mono);
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    border-bottom:1px solid var(--rule);
+    padding-bottom:8px;
+    margin-bottom:2px;
+  }
+  .filelist-head button{
+    font-family: var(--mono);
+    font-size:11px;
+    background:none;
+    border:none;
+    color:var(--danger);
+    cursor:pointer;
+    text-decoration:underline;
+    letter-spacing:0.05em;
+  }
+  ul.files{
+    list-style:none;
+    margin:0;
+    padding:0;
+  }
+  ul.files li{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 2px;
+    border-bottom:1px solid var(--rule);
+    font-size:14px;
+    gap:12px;
+  }
+  ul.files li .name{
+    flex:1;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  ul.files li .name .old-ext{
+    color:var(--ink-soft);
+    font-family: var(--mono);
+    font-size:12px;
+  }
+  ul.files li .arrow{
+    font-family: var(--mono);
+    color:var(--ink-soft);
+    font-size:12px;
+  }
+  ul.files li .new-name{
+    font-family: var(--mono);
+    font-size:12px;
+    color:var(--accent);
+    white-space:nowrap;
+  }
+  ul.files li .remove{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+    padding:0 2px;
+  }
+  ul.files li .remove:hover{ color:var(--danger); }
+
+  .empty-note{
+    padding:18px 2px;
+    color:var(--ink-soft);
+    font-size:13.5px;
+    font-family: var(--mono);
+  }
+
+  .actions{
+    margin-top:26px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  button.primary{
+    flex:1;
+    min-width:220px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:4px;
+    padding:15px 18px;
+    font-size:15px;
+    font-family: 'Georgia', serif;
+    font-weight:700;
+    letter-spacing:0.02em;
+    cursor:pointer;
+    transition: background .15s ease;
+  }
+  button.primary:disabled{
+    background:#b9b4a8;
+    cursor:not-allowed;
+  }
+  button.primary:not(:disabled):hover{
+    background:var(--accent);
+  }
+  button.secondary{
+    background:none;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    padding:15px 16px;
+    font-family: var(--mono);
+    font-size:12.5px;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  button.secondary:hover{
+    border-color:var(--ink);
+    color:var(--ink);
+  }
+
+  .status{
+    margin-top:14px;
+    font-family: var(--mono);
+    font-size:12.5px;
+    color:var(--ink-soft);
+    min-height:16px;
+  }
+  .status.ok{ color:var(--accent); }
+
+  footer{
+    margin-top:40px;
+    font-family: var(--mono);
+    font-size:11px;
+    color:var(--ink-soft);
+    text-align:center;
+    letter-spacing:0.05em;
+  }
+
+  @media (max-width:480px){
+    h1{font-size:24px;}
+    ul.files li .new-name{display:none;}
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <header>
+      <div class="stamp">EXT → .TXT</div>
+      <h1>확장자 일괄 변환기</h1>
+      <p>파일 내용은 그대로 두고, 확장자만 <strong>.txt</strong> 로 바꿔 드립니다.<br>
+      여러 개를 한 번에 올리면 전부 변환해서 zip 파일로 묶어 드립니다.</p>
+    </header>
+
+    <div class="dropzone" id="dropzone">
+      <div class="big">📄 여기로 파일을 끌어다 놓거나, 클릭해서 선택하세요</div>
+      <div class="small">한 번에 여러 개 선택 가능 · 모든 처리는 이 브라우저 안에서만 이루어집니다 (업로드되지 않음)</div>
+      <input type="file" id="fileInput" multiple>
+    </div>
+
+    <div class="filelist">
+      <div class="filelist-head">
+        <span id="fileCount">선택된 파일 0개</span>
+        <button id="clearBtn">목록 비우기</button>
+      </div>
+      <ul class="files" id="fileListUl"></ul>
+      <div class="empty-note" id="emptyNote">아직 선택된 파일이 없습니다.</div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="convertBtn" disabled>선택한 파일 전부 .txt로 변환 → zip 다운로드</button>
+      <button class="secondary" id="convertEachBtn" disabled>개별 파일로 각각 다운로드</button>
+    </div>
+
+    <div class="status" id="statusLine"></div>
+
+    <footer>이름만 바뀌고 내용은 원본과 100% 동일합니다 · 실제 텍스트 문서가 아닌 파일(예: 이미지, docx)을 .txt로 바꾸면 메모장에서 깨져 보일 수 있습니다</footer>
+  </div>
+
+<script>
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileListUl = document.getElementById('fileListUl');
+  const fileCount = document.getElementById('fileCount');
+  const emptyNote = document.getElementById('emptyNote');
+  const convertBtn = document.getElementById('convertBtn');
+  const convertEachBtn = document.getElementById('convertEachBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const statusLine = document.getElementById('statusLine');
+
+  let files = []; // {file, newName}
+
+  function baseNameWithTxt(originalName) {
+    const lastDot = originalName.lastIndexOf('.');
+    const base = lastDot > 0 ? originalName.slice(0, lastDot) : originalName;
+    return base + '.txt';
+  }
+
+  function uniqueName(name, existingNames) {
+    if (!existingNames.has(name)) return name;
+    const lastDot = name.lastIndexOf('.');
+    const base = lastDot > 0 ? name.slice(0, lastDot) : name;
+    const ext = lastDot > 0 ? name.slice(lastDot) : '';
+    let n = 1;
+    let candidate;
+    do {
+      candidate = `${base}(${n})${ext}`;
+      n++;
+    } while (existingNames.has(candidate));
+    return candidate;
+  }
+
+  function addFiles(newFiles) {
+    const existingNames = new Set(files.map(f => f.newName));
+    for (const file of newFiles) {
+      const proposed = uniqueName(baseNameWithTxt(file.name), existingNames);
+      existingNames.add(proposed);
+      files.push({ file, newName: proposed });
+    }
+    render();
+  }
+
+  function render() {
+    fileListUl.innerHTML = '';
+    fileCount.textContent = `선택된 파일 ${files.length}개`;
+    emptyNote.style.display = files.length ? 'none' : 'block';
+    convertBtn.disabled = files.length === 0;
+    convertEachBtn.disabled = files.length === 0;
+
+    files.forEach((entry, idx) => {
+      const li = document.createElement('li');
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'name';
+      nameSpan.textContent = entry.file.name;
+
+      const arrow = document.createElement('span');
+      arrow.className = 'arrow';
+      arrow.textContent = '→';
+
+      const newNameSpan = document.createElement('span');
+      newNameSpan.className = 'new-name';
+      newNameSpan.textContent = entry.newName;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove';
+      removeBtn.textContent = '✕';
+      removeBtn.title = '목록에서 제거';
+      removeBtn.onclick = () => {
+        files.splice(idx, 1);
+        render();
+      };
+
+      li.appendChild(nameSpan);
+      li.appendChild(arrow);
+      li.appendChild(newNameSpan);
+      li.appendChild(removeBtn);
+      fileListUl.appendChild(li);
+    });
+
+    statusLine.textContent = '';
+    statusLine.classList.remove('ok');
+  }
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    addFiles(Array.from(e.target.files));
+    fileInput.value = '';
+  });
+
+  ['dragenter', 'dragover'].forEach(evt => {
+    dropzone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    dropzone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+    });
+  });
+  dropzone.addEventListener('drop', (e) => {
+    const dropped = Array.from(e.dataTransfer.files);
+    addFiles(dropped);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    files = [];
+    render();
+  });
+
+  convertBtn.addEventListener('click', async () => {
+    if (!files.length) return;
+    convertBtn.disabled = true;
+    statusLine.textContent = 'zip 파일을 만들고 있습니다...';
+    statusLine.classList.remove('ok');
+    try {
+      const zip = new JSZip();
+      for (const entry of files) {
+        const buf = await entry.file.arrayBuffer();
+        zip.file(entry.newName, buf);
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'converted_txt_files.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      statusLine.textContent = `완료! ${files.length}개 파일을 converted_txt_files.zip 으로 내려받았습니다.`;
+      statusLine.classList.add('ok');
+    } catch (err) {
+      statusLine.textContent = '오류가 발생했습니다: ' + err.message;
+    } finally {
+      convertBtn.disabled = false;
+    }
+  });
+
+  convertEachBtn.addEventListener('click', async () => {
+    if (!files.length) return;
+    convertEachBtn.disabled = true;
+    statusLine.textContent = '개별 파일을 다운로드하고 있습니다... (브라우저가 여러 다운로드 허용을 물어볼 수 있어요)';
+    statusLine.classList.remove('ok');
+    for (const entry of files) {
+      const url = URL.createObjectURL(entry.file);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = entry.newName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      // 브라우저가 다운로드를 처리할 시간을 살짝 준다
+      await new Promise(r => setTimeout(r, 150));
+    }
+    statusLine.textContent = `완료! ${files.length}개 파일을 각각 다운로드했습니다.`;
+    statusLine.classList.add('ok');
+    convertEachBtn.disabled = false;
+  });
+</script>
+</body>
+</html>

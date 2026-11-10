@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>뽀모도르 시계</title>
+<style id="widget-style">
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#f1f3f6;color:#1f2430}
+  #home{display:flex;justify-content:flex-end;padding:16px}
+  .widget{width:280px;background:#fff;border-radius:18px;padding:18px;box-shadow:0 6px 24px rgba(0,0,0,.12);user-select:none}
+  .widget[data-mode="focus"]{--c:#ef4a4a}
+  .widget[data-mode="short"]{--c:#25a96b}
+  .widget[data-mode="long"]{--c:#3b82f6}
+  .tabs{display:flex;gap:6px;margin-bottom:14px}
+  .tabs button{flex:1;border:0;background:#eef0f4;color:#667;padding:7px 0;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer}
+  .tabs button.on{background:var(--c);color:#fff}
+  .ring{position:relative;width:180px;height:180px;margin:0 auto 14px}
+  .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .ring circle{fill:none;stroke-width:10}
+  .ring .bg{stroke:#eef0f4}
+  .ring .fg{stroke:var(--c);stroke-linecap:round;transition:stroke-dashoffset .4s linear}
+  .time{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .time b{font-size:42px;font-variant-numeric:tabular-nums;letter-spacing:-1px}
+  .time span{font-size:12px;color:#889;margin-top:2px}
+  .ctrl{display:flex;gap:8px}
+  .ctrl button{border:0;border-radius:11px;padding:11px 0;font-size:14px;font-weight:700;cursor:pointer}
+  #startBtn{flex:2;background:var(--c);color:#fff}
+  #resetBtn,#skipBtn{flex:1;background:#eef0f4;color:#445}
+  .dots{display:flex;justify-content:center;gap:6px;margin:12px 0 2px}
+  .dots i{width:9px;height:9px;border-radius:50%;background:#e1e4ea}
+  .dots i.done{background:var(--c)}
+  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #eef0f4;font-size:12px;color:#556}
+  .foot label{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .foot input[type=checkbox]{width:15px;height:15px;accent-color:var(--c);cursor:pointer}
+  .foot input:disabled{cursor:not-allowed}
+  .count{color:#889}
+  .note{font-size:11px;color:#c0392b;margin-top:6px;display:none}
+  .note.show{display:block}
+  .set{display:flex;gap:6px;margin-top:10px;font-size:11px;color:#778;align-items:center;justify-content:center}
+  .set input{width:40px;padding:4px;border:1px solid #dde;border-radius:6px;text-align:center;font-size:12px}
+</style>
+</head>
+<body>
+<div id="home">
+  <div class="widget" id="widget" data-mode="focus">
+    <div class="tabs">
+      <button data-mode="focus" class="on">집중</button>
+      <button data-mode="short">짧은 휴식</button>
+      <button data-mode="long">긴 휴식</button>
+    </div>
+    <div class="ring">
+      <svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44"/><circle class="fg" id="fg" cx="50" cy="50" r="44"/></svg>
+      <div class="time"><b id="clock">25:00</b><span id="label">집중 시간</span></div>
+    </div>
+    <div class="ctrl">
+      <button id="resetBtn" title="초기화">↺</button>
+      <button id="startBtn">시작</button>
+      <button id="skipBtn" title="건너뛰기">⏭</button>
+    </div>
+    <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+    <div class="set">
+      집중 <input type="number" id="setFocus" value="25" min="1" max="120">
+      휴식 <input type="number" id="setShort" value="5" min="1" max="60">
+      긴휴식 <input type="number" id="setLong" value="15" min="1" max="60">
+    </div>
+    <div class="foot">
+      <label><input type="checkbox" id="pinChk"> 항상 위에 표시</label>
+      <span class="count" id="count">완료 0회</span>
+    </div>
+    <div class="note" id="note">이 브라우저는 항상 위 기능을 지원하지 않아요. (Chrome/Edge 116 이상 필요)</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const widget = $('widget'), home = $('home');
+  const fg = $('fg'), clock = $('clock'), label = $('label');
+  const startBtn = $('startBtn'), pinChk = $('pinChk');
+  const C = 2 * Math.PI * 44;
+  fg.style.strokeDasharray = C;
+
+  const names = {focus:'집중 시간', short:'짧은 휴식', long:'긴 휴식'};
+  let mode = 'focus', total = 25*60, remain = total, running = false, endAt = 0, tick = null;
+  let done = 0, cycle = 0, audioCtx = null, pipWin = null;
+
+  const mins = () => ({
+    focus: Math.max(1, +$('setFocus').value || 25),
+    short: Math.max(1, +$('setShort').value || 5),
+    long:  Math.max(1, +$('setLong').value || 15)
+  });
+
+  function fmt(s){ s = Math.max(0, Math.ceil(s)); return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
+
+  function render(){
+    clock.textContent = fmt(remain);
+    fg.style.strokeDashoffset = C * (1 - remain/total);
+    label.textContent = names[mode];
+    widget.dataset.mode = mode;
+    widget.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+    startBtn.textContent = running ? '일시정지' : '시작';
+    $('count').textContent = '완료 ' + done + '회';
+    [...$('dots').children].forEach((d,i) => d.classList.toggle('done', i < cycle));
+    document.title = (running ? fmt(remain) + ' · ' : '') + names[mode] + ' - 뽀모도르';
+  }
+
+  function setMode(m){
+    stop();
+    mode = m; total = remain = mins()[m] * 60;
+    render();
+  }
+
+  function beep(){
+    try{
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      [0, .25, .5].forEach(t => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+        const n = audioCtx.currentTime + t;
+        g.gain.setValueAtTime(.0001, n); g.gain.exponentialRampToValueAtTime(.3, n + .02); g.gain.exponentialRampToValueAtTime(.0001, n + .2);
+        o.start(n); o.stop(n + .22);
+      });
+    }catch(e){}
+  }
+
+  function notify(msg){
+    try{ if('Notification' in window && Notification.permission === 'granted') new Notification('뽀모도르', {body: msg}); }catch(e){}
+  }
+
+  function stop(){ running = false; clearInterval(tick); tick = null; }
+
+  function start(){
+    if(running) return;
+    try{ audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); }catch(e){}
+    if('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+    running = true; endAt = Date.now() + remain * 1000;
+    tick = setInterval(() => {
+      remain = (endAt - Date.now()) / 1000;
+      if(remain <= 0){ remain = 0; finish(); return; }
+      render();
+    }, 250);
+    render();
+  }
+
+  function pause(){ stop(); render(); }
+
+  function finish(){
+    stop(); beep();
+    if(mode === 'focus'){
+      done++; cycle++;
+      if(cycle >= 4){ notify('4회 완료! 긴 휴식을 시작하세요.'); setMode('long'); return; }
+      notify('집중 끝! 잠깐 쉬어가요.'); setMode('short');
+    }else{
+      if(mode === 'long') cycle = 0;
+      notify('휴식 끝! 다시 집중해볼까요?'); setMode('focus');
+    }
+  }
+
+  startBtn.onclick = () => running ? pause() : start();
+  $('resetBtn').onclick = () => { stop(); remain = total = mins()[mode]*60; render(); };
+  $('skipBtn').onclick = () => {
+    stop();
+    if(mode === 'focus'){ cycle = Math.min(cycle+1, 4); setMode(cycle >= 4 ? 'long' : 'short'); }
+    else { if(mode === 'long') cycle = 0; setMode('focus'); }
+  };
+  widget.querySelectorAll('.tabs button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  ['setFocus','setShort','setLong'].forEach(id => $(id).onchange = () => { if(!running){ remain = total = mins()[mode]*60; render(); } });
+
+  /* ---------- 항상 위에 표시 (Document Picture-in-Picture) ---------- */
+  const pipSupported = 'documentPictureInPicture' in window;
+  if(!pipSupported){
+    pinChk.disabled = true;
+    $('note').classList.add('show');
+  }
+
+  async function openPin(){
+    try{
+      pipWin = await documentPictureInPicture.requestWindow({width: 320, height: 470});
+      const st = document.getElementById('widget-style').cloneNode(true);
+      pipWin.document.head.appendChild(st);
+      pipWin.document.body.style.cssText = 'margin:0;padding:12px;background:#f1f3f6;display:flex;justify-content:center';
+      widget.style.boxShadow = 'none';
+      pipWin.document.body.appendChild(widget);
+      pipWin.addEventListener('pagehide', () => {
+        widget.style.boxShadow = '';
+        home.appendChild(widget);
+        pinChk.checked = false;
+        pipWin = null;
+      });
+    }catch(e){
+      pinChk.checked = false;
+      pipWin = null;
+    }
+  }
+
+  pinChk.onchange = () => {
+    if(pinChk.checked) openPin();
+    else if(pipWin) pipWin.close();
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>

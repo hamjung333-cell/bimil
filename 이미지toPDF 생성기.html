@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>이미지 PDF 생성기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+  /* 레이아웃: 왼쪽은 PDF 설정 패널(고정), 오른쪽은 쪽 미리보기와 이미지 순서 */
+  :root {
+    --bg: #eef0f2;
+    --surface: #ffffff;
+    --surface-2: #f5f6f8;
+    --stage: #e2e6ea;
+    --line: #d3d8de;
+    --fg: #15191e;
+    --muted: #5a6570;
+    --accent: #0b6e66;
+    --accent-fg: #ffffff;
+    --accent-soft: #d9eeeb;
+    --danger: #b3261e;
+    --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1316;
+      --surface: #171c20;
+      --surface-2: #1d2328;
+      --stage: #0b0e10;
+      --line: #2b343a;
+      --fg: #e6eaed;
+      --muted: #98a3ad;
+      --accent: #4ccfbf;
+      --accent-fg: #06201c;
+      --accent-soft: #123532;
+      --danger: #ff8a80;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1316;
+    --surface: #171c20;
+    --surface-2: #1d2328;
+    --stage: #0b0e10;
+    --line: #2b343a;
+    --fg: #e6eaed;
+    --muted: #98a3ad;
+    --accent: #4ccfbf;
+    --accent-fg: #06201c;
+    --accent-soft: #123532;
+    --danger: #ff8a80;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.55;
+    padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .app { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+
+  .top h1 { margin: 0 0 6px; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+  .top p { margin: 0; color: var(--muted); max-width: 60ch; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (min-width: 880px) {
+    .layout { grid-template-columns: 320px minmax(0, 1fr); }
+    .panel { grid-column: 1; grid-row: 1; position: sticky; top: 16px; }
+    .library { grid-column: 2; grid-row: 1; }
+  }
+
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible, .seg label:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* 빈 상태 */
+  .library { min-width: 0; }
+  .drop {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    width: 100%; min-height: 340px; padding: 32px 20px; text-align: center;
+    background: var(--surface); border: 1.5px dashed var(--line); border-radius: 6px;
+  }
+  .drop:hover, .filedrag .drop, .filedrag .add { border-color: var(--accent); background: var(--accent-soft); }
+  .drop svg { width: 120px; height: auto; color: var(--muted); }
+  .drop strong { font-size: 16px; font-weight: 600; }
+  .drop span { color: var(--muted); }
+  .drop .kinds { font-family: var(--font-mono); font-size: 12px; }
+  .dropAlt { display: flex; justify-content: center; margin-top: 10px; }
+
+  /* 목록 막대 */
+  .listbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 12px; }
+  .listbar .count { font-family: var(--font-mono); font-size: 13px; margin-right: auto; color: var(--muted); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 7px 12px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); font-size: 13px;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--accent); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.danger:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+  .note { margin: 0 0 12px; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--surface); font-size: 13px; overflow-wrap: anywhere; }
+  .note.error { border-left-color: var(--danger); }
+
+  .section + .section { margin-top: 24px; }
+  .sechead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 10px; font-size: 13px; font-weight: 600; }
+  .sechead span { font-family: var(--font-mono); font-weight: 400; font-size: 12px; color: var(--muted); }
+
+  /* 페이지 미리보기 (한 쪽에 여러 장일 때) */
+  .pagegrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; align-items: start; }
+  .pcard { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; min-width: 0; }
+  .pstage { background: var(--stage); padding: 12px; display: grid; place-items: center; border-radius: 3px 3px 0 0; }
+  .pstage canvas { display: block; max-width: 100%; height: auto; box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 12px rgba(0,0,0,.12); }
+  .pmeta { padding: 7px 10px; display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+  .pmeta b { font-weight: 600; }
+  .pmeta span { font-family: var(--font-mono); color: var(--muted); }
+
+  /* 이미지 카드 */
+  .grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 14px; }
+  .card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; display: flex; flex-direction: column; min-width: 0; }
+  .card.dragging { opacity: .4; }
+  .card.drop-before::before, .card.drop-after::after {
+    content: ""; position: absolute; top: -1px; bottom: -1px; width: 3px; background: var(--accent); border-radius: 2px;
+  }
+  .card.drop-before::before { left: -9px; }
+  .card.drop-after::after { right: -9px; }
+  .stage { position: relative; aspect-ratio: 4 / 5; background: var(--stage); border-radius: 3px 3px 0 0; cursor: grab; }
+  .stage canvas {
+    position: absolute; inset: 0; margin: auto; width: auto; height: auto; max-width: calc(100% - 20px); max-height: calc(100% - 20px);
+    box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 12px rgba(0,0,0,.12); border-radius: 1px;
+  }
+  .num {
+    position: absolute; top: 6px; left: 6px; z-index: 1; min-width: 22px; padding: 1px 6px; text-align: center;
+    background: var(--fg); color: var(--bg); font-family: var(--font-mono); font-size: 11px; font-weight: 500; border-radius: 3px;
+  }
+  .meta { padding: 7px 9px 2px; display: flex; flex-direction: column; min-width: 0; }
+  .fname { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dim { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+  .tools { display: flex; padding: 4px 5px 6px; gap: 2px; }
+  .tools button { flex: 1; height: 30px; display: grid; place-items: center; border: 0; background: transparent; border-radius: 4px; color: var(--muted); }
+  .tools button:hover:not(:disabled) { background: var(--surface-2); color: var(--fg); }
+  .tools button[data-act="remove"]:hover { color: var(--danger); }
+  .tools button:disabled { opacity: .3; cursor: default; }
+  .tools svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .add {
+    min-height: 190px; display: grid; place-items: center; text-align: center; color: var(--muted);
+    border: 1.5px dashed var(--line); border-radius: 4px; background: transparent; width: 100%; height: 100%; padding: 12px;
+  }
+  .add:hover { border-color: var(--accent); color: var(--fg); }
+  .add b { display: block; font-size: 22px; font-weight: 400; line-height: 1; margin-bottom: 4px; }
+
+  /* 설정 패널 */
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .panel h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .fields { display: flex; flex-direction: column; gap: 16px; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  fieldset:disabled { opacity: .45; }
+  legend { padding: 0; margin-bottom: 6px; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .02em; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+  .seg label { position: relative; flex: 1; min-width: 0; text-align: center; cursor: pointer; }
+  .seg label + label { border-left: 1px solid var(--line); }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg span { display: block; padding: 7px 4px; font-size: 13px; white-space: nowrap; }
+  .seg input:checked + span { background: var(--accent); color: var(--accent-fg); font-weight: 500; }
+  .seg label:has(input:disabled) { opacity: .35; cursor: not-allowed; }
+  .seg.nums span { font-family: var(--font-mono); padding: 7px 0; }
+  fieldset:disabled .seg label { cursor: default; }
+  .hint { margin: 0; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+  .field-text { display: flex; flex-direction: column; gap: 6px; }
+  .field-text label { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .02em; }
+  .field-text input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2); color: var(--fg); font: inherit; }
+  .sum { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .sum dt { color: var(--muted); }
+  .sum dd { margin: 0; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .cta {
+    width: 100%; padding: 11px 14px; border: 0; border-radius: 5px; background: var(--accent); color: var(--accent-fg); font-size: 15px; font-weight: 600;
+  }
+  .cta:disabled { opacity: .4; cursor: not-allowed; }
+  .progress { display: flex; flex-direction: column; gap: 6px; }
+  .progress progress { width: 100%; height: 6px; accent-color: var(--accent); }
+  .progress span { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .result { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--accent); border-radius: 5px; background: var(--accent-soft); }
+  .result .rname { font-weight: 600; overflow-wrap: anywhere; }
+  .result .rinfo { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .result .rmsg { font-size: 12px; min-height: 1.2em; }
+  .result .btn { background: var(--surface); }
+
+  @media (prefers-reduced-motion: no-preference) { .btn, .cta, .drop, .add { transition: border-color .15s, background-color .15s; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <h1>이미지 PDF 생성기</h1>
+    <p>이미지를 순서대로 모아 PDF 파일 하나로 만들어요. 한 쪽에 최대 8장까지 배치할 수 있고, 파일은 이 브라우저 안에서만 처리되어 어디에도 업로드되지 않아요.</p>
+  </header>
+
+  <main class="layout">
+    <aside class="panel" aria-label="PDF 설정">
+      <h2>PDF 설정</h2>
+      <form id="settings" onsubmit="return false">
+        <div class="fields">
+          <fieldset id="f-per">
+            <legend>한 쪽에 넣을 이미지 수</legend>
+            <div class="seg nums">
+              <label><input type="radio" name="per" value="1" checked><span>1</span></label>
+              <label><input type="radio" name="per" value="2"><span>2</span></label>
+              <label><input type="radio" name="per" value="3"><span>3</span></label>
+              <label><input type="radio" name="per" value="4"><span>4</span></label>
+              <label><input type="radio" name="per" value="5"><span>5</span></label>
+              <label><input type="radio" name="per" value="6"><span>6</span></label>
+              <label><input type="radio" name="per" value="7"><span>7</span></label>
+              <label><input type="radio" name="per" value="8"><span>8</span></label>
+            </div>
+            <p class="hint" id="perHint">한 쪽에 1장</p>
+          </fieldset>
+          <fieldset id="f-size">
+            <legend>용지</legend>
+            <div class="seg">
+              <label><input type="radio" name="size" value="a4" checked><span>A4</span></label>
+              <label><input type="radio" name="size" value="letter"><span>Letter</span></label>
+              <label><input type="radio" name="size" value="image"><span>이미지 크기</span></label>
+            </div>
+            <p class="hint" id="sizeHint">210 × 297 mm</p>
+          </fieldset>
+          <fieldset id="f-orient">
+            <legend>방향</legend>
+            <div class="seg">
+              <label><input type="radio" name="orient" value="auto" checked><span>자동</span></label>
+              <label><input type="radio" name="orient" value="portrait"><span>세로</span></label>
+              <label><input type="radio" name="orient" value="landscape"><span>가로</span></label>
+            </div>
+          </fieldset>
+          <fieldset id="f-fit">
+            <legend>맞춤</legend>
+            <div class="seg">
+              <label><input type="radio" name="fit" value="contain" checked><span>전체 보이기</span></label>
+              <label><input type="radio" name="fit" value="cover"><span>꽉 채우기</span></label>
+            </div>
+          </fieldset>
+          <fieldset id="f-margin">
+            <legend>여백</legend>
+            <div class="seg">
+              <label><input type="radio" name="margin" value="0"><span>없음</span></label>
+              <label><input type="radio" name="margin" value="5" checked><span>5mm</span></label>
+              <label><input type="radio" name="margin" value="10"><span>10mm</span></label>
+            </div>
+          </fieldset>
+          <fieldset id="f-bg">
+            <legend>배경색</legend>
+            <div class="seg">
+              <label><input type="radio" name="bg" value="white" checked><span>흰색</span></label>
+              <label><input type="radio" name="bg" value="black"><span>검정</span></label>
+            </div>
+          </fieldset>
+          <fieldset id="f-quality">
+            <legend>화질</legend>
+            <div class="seg">
+              <label><input type="radio" name="quality" value="small"><span>작은 용량</span></label>
+              <label><input type="radio" name="quality" value="std" checked><span>표준</span></label>
+              <label><input type="radio" name="quality" value="high"><span>고화질</span></label>
+            </div>
+            <p class="hint" id="qualityHint">150 dpi · JPEG 88%</p>
+          </fieldset>
+        </div>
+      </form>
+
+      <div class="field-text">
+        <label for="fname">파일 이름</label>
+        <input id="fname" type="text" value="이미지 모음.pdf" autocomplete="off" spellcheck="false">
+      </div>
+
+      <dl class="sum">
+        <dt>이미지</dt><dd id="sumCount">0장</dd>
+        <dt>PDF 쪽수</dt><dd id="sumPages">0쪽</dd>
+        <dt>원본 용량</dt><dd id="sumSize">0 KB</dd>
+      </dl>
+
+      <button type="button" class="cta" id="buildBtn" disabled>PDF 만들기</button>
+
+      <div class="progress" id="progress" hidden>
+        <progress id="prog" value="0" max="1"></progress>
+        <span id="progText"></span>
+      </div>
+
+      <div class="result" id="result" hidden>
+        <div class="rname" id="rname"></div>
+        <div class="rinfo" id="rinfo"></div>
+        <button type="button" class="btn" id="saveBtn">PDF 저장</button>
+        <div class="rmsg" id="rmsg" role="status"></div>
+      </div>
+    </aside>
+
+    <section class="library" aria-label="미리보기">
+      <button type="button" class="drop" id="drop">
+        <svg viewBox="0 0 120 84" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <rect x="8" y="14" width="46" height="62" rx="2" opacity=".35"/>
+          <rect x="32" y="8" width="46" height="62" rx="2" opacity=".6"/>
+          <rect x="56" y="14" width="46" height="62" rx="2" fill="var(--surface)"/>
+          <path d="M64 62l11-14 8 9 6-7 9 12z" stroke-linejoin="round"/>
+          <circle cx="84" cy="30" r="4"/>
+        </svg>
+        <strong>이미지를 여기에 끌어다 놓으세요</strong>
+        <span>수백 장도 한 번에 넣을 수 있어요. 폴더째 끌어다 놓아도 돼요.</span>
+        <span>눌러서 파일 고르기 · 붙여넣기(Ctrl/⌘+V)도 돼요</span>
+        <span class="kinds">JPG · PNG · WEBP · GIF · BMP · SVG</span>
+      </button>
+      <div class="dropAlt" id="dropAlt"><button type="button" class="btn" id="dirBtn0">폴더 통째로 추가</button></div>
+
+      <div class="listbar" id="listbar" hidden>
+        <span class="count" id="count"></span>
+        <button type="button" class="btn" id="addBtn">이미지 추가</button>
+        <button type="button" class="btn" id="dirBtn">폴더 추가</button>
+        <button type="button" class="btn" id="sortBtn">이름순 정렬</button>
+        <button type="button" class="btn danger" id="clearBtn">모두 지우기</button>
+      </div>
+      <p class="note" id="note" role="status" hidden></p>
+
+      <div class="section" id="pagesSection" hidden>
+        <h3 class="sechead">페이지 미리보기 <span id="pagesInfo"></span></h3>
+        <ol class="pagegrid" id="pages"></ol>
+      </div>
+      <div class="section" id="imagesSection" hidden>
+        <h3 class="sechead" id="imagesHead">이미지 순서 <span>끌어서 순서를 바꿀 수 있어요</span></h3>
+        <ol class="grid" id="grid"></ol>
+      </div>
+    </section>
+  </main>
+</div>
+
+<input type="file" id="file" accept="image/*" multiple hidden>
+<input type="file" id="dir" webkitdirectory multiple hidden>
+
+<script>
+// <pdf>
+function assemblePdf(pages) {
+  // pages: [{ wPt, hPt, pxW, pxH, jpeg: Uint8Array }]
+  const enc = new TextEncoder();
+  const parts = [];
+  const offs = [];
+  let pos = 0;
+  const put = (d) => {
+    const u = typeof d === 'string' ? enc.encode(d) : d;
+    parts.push(u);
+    pos += u.byteLength;
+  };
+  const n = pages.length;
+  const f = (x) => x.toFixed(2);
+  put('%PDF-1.4\n%âãÏÓ\n');
+  offs[1] = pos;
+  put('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  offs[2] = pos;
+  const kids = pages.map((_, i) => (5 + 3 * i) + ' 0 R').join(' ');
+  put('2 0 obj\n<< /Type /Pages /Kids [' + kids + '] /Count ' + n + ' >>\nendobj\n');
+  pages.forEach((p, i) => {
+    const imgId = 3 + 3 * i, conId = 4 + 3 * i, pgId = 5 + 3 * i;
+    offs[imgId] = pos;
+    put(imgId + ' 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + p.pxW + ' /Height ' + p.pxH +
+      ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + p.jpeg.byteLength + ' >>\nstream\n');
+    put(p.jpeg);
+    put('\nendstream\nendobj\n');
+    const content = 'q ' + f(p.wPt) + ' 0 0 ' + f(p.hPt) + ' 0 0 cm\n/Im0 Do\nQ\n';
+    offs[conId] = pos;
+    put(conId + ' 0 obj\n<< /Length ' + enc.encode(content).byteLength + ' >>\nstream\n' + content + 'endstream\nendobj\n');
+    offs[pgId] = pos;
+    put(pgId + ' 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + f(p.wPt) + ' ' + f(p.hPt) +
+      '] /Resources << /XObject << /Im0 ' + imgId + ' 0 R >> >> /Contents ' + conId + ' 0 R >>\nendobj\n');
+  });
+  const total = 3 + 3 * n;
+  const xrefPos = pos;
+  let xref = 'xref\n0 ' + total + '\n0000000000 65535 f \n';
+  for (let i = 1; i < total; i++) xref += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+  put(xref + 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xrefPos + '\n%%EOF\n');
+  return new Blob(parts, { type: 'application/pdf' });
+}
+// </pdf>
+
+// <layout>
+const SIZES = { a4: [595.28, 841.89], letter: [612, 792] };
+const MARGINS = { '0': 0, '5': 14.17, '10': 28.35 };
+// 한 쪽에 넣을 장수별 [열, 행] 배열 (세로 용지 / 가로 용지)
+const PORT = { 1: [1, 1], 2: [1, 2], 3: [1, 3], 4: [2, 2], 5: [2, 3], 6: [2, 3], 7: [2, 4], 8: [2, 4] };
+const LAND = { 1: [1, 1], 2: [2, 1], 3: [3, 1], 4: [2, 2], 5: [3, 2], 6: [3, 2], 7: [4, 2], 8: [4, 2] };
+
+const rdim = (it) => (it.rot % 180 ? [it.h, it.w] : [it.w, it.h]);
+
+// 한 쪽(group: 그 쪽에 들어가는 이미지들)의 크기와 칸 위치를 계산. 단위는 pt
+function groupGeom(group, s) {
+  const n = s.per;
+  const m = MARGINS[s.margin];
+  let wPt, hPt;
+  if (n === 1 && s.size === 'image') {
+    const it = group[0];
+    const [rw, rh] = rdim(it);
+    const cap = Math.min(1, 14000 / (Math.max(it.w, it.h) * 0.75));
+    wPt = rw * 0.75 * cap + 2 * m;
+    hPt = rh * 0.75 * cap + 2 * m;
+  } else {
+    const [a, b] = SIZES[s.size === 'image' ? 'a4' : s.size];
+    const wide = group.filter((it) => { const [rw, rh] = rdim(it); return rw > rh; }).length;
+    const land = s.orient === 'landscape' || (s.orient === 'auto' && wide * 2 > group.length);
+    wPt = land ? b : a;
+    hPt = land ? a : b;
+  }
+  const [cols, rows] = (wPt > hPt ? LAND : PORT)[n];
+  const gap = n > 1 ? m / 2 : 0;
+  const aw = wPt - 2 * m, ah = hPt - 2 * m;
+  const cw = (aw - gap * (cols - 1)) / cols, ch = (ah - gap * (rows - 1)) / rows;
+  const cells = group.map((_, i) => ({
+    x: m + (i % cols) * (cw + gap),
+    y: m + Math.floor(i / cols) * (ch + gap),
+    w: cw, h: ch
+  }));
+  return { wPt, hPt, cells };
+}
+// </layout>
+
+const QUALITY = {
+  small: { q: 0.72, dpi: 100, img: 0.5, hint: '100 dpi · JPEG 72%' },
+  std:   { q: 0.88, dpi: 150, img: 1,   hint: '150 dpi · JPEG 88%' },
+  high:  { q: 0.95, dpi: 240, img: 1,   hint: '240 dpi · JPEG 95%' }
+};
+const MAX_PX = 16e6;
+
+const $ = (s) => document.querySelector(s);
+const el = {
+  drop: $('#drop'), dropAlt: $('#dropAlt'), file: $('#file'), dir: $('#dir'), listbar: $('#listbar'), count: $('#count'), note: $('#note'),
+  pagesSection: $('#pagesSection'), pages: $('#pages'), pagesInfo: $('#pagesInfo'),
+  imagesSection: $('#imagesSection'), imagesHead: $('#imagesHead'), grid: $('#grid'),
+  addBtn: $('#addBtn'), dirBtn: $('#dirBtn'), dirBtn0: $('#dirBtn0'), sortBtn: $('#sortBtn'), clearBtn: $('#clearBtn'), settings: $('#settings'),
+  perHint: $('#perHint'), sizeHint: $('#sizeHint'), qualityHint: $('#qualityHint'), fname: $('#fname'),
+  sumCount: $('#sumCount'), sumPages: $('#sumPages'), sumSize: $('#sumSize'),
+  buildBtn: $('#buildBtn'), progress: $('#progress'), prog: $('#prog'), progText: $('#progText'),
+  result: $('#result'), rname: $('#rname'), rinfo: $('#rinfo'), saveBtn: $('#saveBtn'), rmsg: $('#rmsg')
+};
+
+const state = { items: [], settings: null, building: false, result: null };
+let uid = 0;
+let downloads = null;
+let pageCanvases = [];
+
+const ICONS = {
+  left: '<path d="M10 3 5 8l5 5"/>',
+  right: '<path d="M6 3l5 5-5 5"/>',
+  rotate: '<path d="M13 8a5 5 0 1 1-1.6-3.7"/><path d="M13 2.5V5h-2.5"/>',
+  remove: '<path d="M4 4l8 8M12 4l-8 8"/>'
+};
+const icon = (n) => '<svg viewBox="0 0 16 16" aria-hidden="true">' + ICONS[n] + '</svg>';
+
+function formatSize(b) {
+  if (b < 1024 * 1024) return Math.max(1, Math.round(b / 1024)) + ' KB';
+  return (b / 1024 / 1024).toFixed(1) + ' MB';
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/* ---------- 설정 ---------- */
+function readSettings() {
+  const f = new FormData(el.settings);
+  const prev = state.settings || {};
+  return {
+    per: Number(f.get('per')) || 1,
+    size: f.get('size') || 'a4',
+    orient: f.get('orient') || prev.orient || 'auto',
+    fit: f.get('fit') || prev.fit || 'contain',
+    margin: f.get('margin') || '5',
+    bg: f.get('bg') || 'white',
+    quality: f.get('quality') || 'std'
+  };
+}
+const orientFitLocked = () => state.settings.per === 1 && state.settings.size === 'image';
+function syncSettingsUi() {
+  const s = state.settings;
+  $('#f-orient').disabled = orientFitLocked();
+  $('#f-fit').disabled = orientFitLocked();
+  el.settings.querySelector('input[name="size"][value="image"]').disabled = s.per > 1;
+  el.sizeHint.textContent = s.size === 'a4' ? '210 × 297 mm' : s.size === 'letter' ? '215.9 × 279.4 mm' : '쪽마다 이미지 크기에 맞춰요';
+  const [pc, pr] = PORT[s.per], [lc, lr] = LAND[s.per];
+  el.perHint.textContent = s.per === 1 ? '한 쪽에 1장' : '한 쪽에 ' + s.per + '장 · 세로 ' + pc + '×' + pr + ' / 가로 ' + lc + '×' + lr;
+  el.qualityHint.textContent = QUALITY[s.quality].hint;
+}
+
+/* ---------- 그리기 ---------- */
+function prepGroup(canvas, group, s, sc) {
+  const g = groupGeom(group, s);
+  canvas.width = Math.max(1, Math.round(g.wPt * sc));
+  canvas.height = Math.max(1, Math.round(g.hPt * sc));
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = s.bg === 'black' ? '#000000' : '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(canvas.width / g.wPt, canvas.height / g.hPt);
+  return { g, ctx };
+}
+function drawCell(ctx, g, i, it, src, s) {
+  const c = g.cells[i];
+  const [rw, rh] = rdim(it);
+  const fill = s.fit === 'cover' && !(s.per === 1 && s.size === 'image');
+  const k = fill ? Math.max(c.w / rw, c.h / rh) : Math.min(c.w / rw, c.h / rh);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(c.x, c.y, c.w, c.h);
+  ctx.clip();
+  ctx.translate(c.x + c.w / 2, c.y + c.h / 2);
+  ctx.rotate(it.rot * Math.PI / 180);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(src, -it.w * k / 2, -it.h * k / 2, it.w * k, it.h * k);
+  ctx.restore();
+}
+function drawGroup(canvas, group, srcs, s, sc) {
+  const { g, ctx } = prepGroup(canvas, group, s, sc);
+  group.forEach((it, i) => drawCell(ctx, g, i, it, srcs[i], s));
+  return g;
+}
+function paintCard(item) {
+  const cv = item.canvas;
+  if (!cv) return;
+  const s = state.settings;
+  if (s.per === 1) {
+    const g = groupGeom([item], s);
+    drawGroup(cv, [item], [item.thumb], s, 200 / g.wPt);
+    return;
+  }
+  // 여러 장 배치일 때 이미지 카드는 그 이미지만 작게 보여줌
+  const tw = item.thumb.width, th = item.thumb.height;
+  const k = Math.min(1, 170 / Math.max(tw, th));
+  const swap = item.rot % 180 !== 0;
+  cv.width = Math.max(1, Math.round((swap ? th : tw) * k));
+  cv.height = Math.max(1, Math.round((swap ? tw : th) * k));
+  const ctx = cv.getContext('2d');
+  ctx.translate(cv.width / 2, cv.height / 2);
+  ctx.rotate(item.rot * Math.PI / 180);
+  ctx.drawImage(item.thumb, -tw * k / 2, -th * k / 2, tw * k, th * k);
+}
+function paintPage(pi) {
+  const cv = pageCanvases[pi];
+  if (!cv) return;
+  const s = state.settings;
+  const group = state.items.slice(pi * s.per, (pi + 1) * s.per);
+  const g = groupGeom(group, s);
+  drawGroup(cv, group, group.map((it) => it.thumb), s, 300 / g.wPt);
+}
+let paintQueued = false, paintGen = 0;
+function paintAll() {
+  paintGen++;
+  if (paintQueued) return;
+  paintQueued = true;
+  requestAnimationFrame(() => {
+    paintQueued = false;
+    const gen = paintGen;
+    const tasks = [];
+    if (state.settings.per > 1) pageCanvases.forEach((_, pi) => tasks.push(() => paintPage(pi)));
+    state.items.forEach((it) => tasks.push(() => paintCard(it)));
+    let i = 0;
+    const step = () => {
+      if (gen !== paintGen) return;
+      const end = Math.min(i + 30, tasks.length);
+      for (; i < end; i++) tasks[i]();
+      if (i < tasks.length) requestAnimationFrame(step);
+    };
+    step();
+  });
+}
+
+/* ---------- 화면 구성 ---------- */
+function cardEl(item, i, n, per) {
+  const li = document.createElement('li');
+  li.className = 'card';
+  li.draggable = true;
+  li.dataset.id = item.id;
+  const badge = per > 1 ? (Math.floor(i / per) + 1) + '-' + (i % per + 1) : String(i + 1);
+  li.innerHTML =
+    '<div class="stage"><span class="num" title="' + (per > 1 ? '쪽 번호-칸 번호' : '') + '">' + badge + '</span><canvas aria-label="' + (i + 1) + '번째 이미지"></canvas></div>' +
+    '<div class="meta"><span class="fname" title="' + esc(item.name) + '">' + esc(item.name) + '</span>' +
+    '<span class="dim">' + item.w + '×' + item.h + '</span></div>' +
+    '<div class="tools">' +
+    '<button type="button" data-act="left" aria-label="앞으로 옮기기"' + (i === 0 ? ' disabled' : '') + '>' + icon('left') + '</button>' +
+    '<button type="button" data-act="rotate" aria-label="시계 방향으로 회전">' + icon('rotate') + '</button>' +
+    '<button type="button" data-act="right" aria-label="뒤로 옮기기"' + (i === n - 1 ? ' disabled' : '') + '>' + icon('right') + '</button>' +
+    '<button type="button" data-act="remove" aria-label="삭제">' + icon('remove') + '</button>' +
+    '</div>';
+  item.canvas = li.querySelector('canvas');
+  return li;
+}
+function pageEl(pi, total, n, per) {
+  const li = document.createElement('li');
+  li.className = 'pcard';
+  const a = pi * per + 1, b = Math.min(n, (pi + 1) * per);
+  li.innerHTML = '<div class="pstage"><canvas aria-label="' + (pi + 1) + '쪽 미리보기"></canvas></div>' +
+    '<div class="pmeta"><b>' + (pi + 1) + '쪽</b><span>이미지 ' + a + (b > a ? '–' + b : '') + '</span></div>';
+  pageCanvases[pi] = li.querySelector('canvas');
+  return li;
+}
+function render() {
+  const n = state.items.length;
+  const per = state.settings.per;
+  const has = n > 0;
+  const multi = has && per > 1;
+  el.drop.hidden = has;
+  el.dropAlt.hidden = has;
+  el.listbar.hidden = !has;
+  el.imagesSection.hidden = !has;
+  el.pagesSection.hidden = !multi;
+  el.imagesHead.hidden = !multi;
+
+  pageCanvases = [];
+  const totalPages = Math.ceil(n / per);
+  el.pages.replaceChildren(...(multi ? Array.from({ length: totalPages }, (_, pi) => pageEl(pi, totalPages, n, per)) : []));
+  el.pagesInfo.textContent = totalPages + '쪽 · 한 쪽에 ' + per + '장';
+
+  const nodes = state.items.map((it, i) => cardEl(it, i, n, per));
+  if (has) {
+    const li = document.createElement('li');
+    li.style.listStyle = 'none';
+    li.innerHTML = '<button type="button" class="add" id="addTile"><span><b>＋</b>이미지 추가</span></button>';
+    nodes.push(li);
+  }
+  el.grid.replaceChildren(...nodes);
+  updateSummary();
+  paintAll();
+  hideResult();
+}
+function updateSummary() {
+  const n = state.items.length;
+  const per = state.settings.per;
+  const total = state.items.reduce((a, it) => a + it.size, 0);
+  el.count.textContent = n + '장';
+  el.sumCount.textContent = n + '장';
+  el.sumPages.textContent = Math.ceil(n / per) + '쪽';
+  el.sumSize.textContent = formatSize(total);
+  el.buildBtn.disabled = n === 0 || state.building;
+}
+function note(msg, isError) {
+  if (!msg) { el.note.hidden = true; return; }
+  el.note.hidden = false;
+  el.note.textContent = msg;
+  el.note.classList.toggle('error', !!isError);
+}
+
+/* ---------- 파일 불러오기 ---------- */
+/* 큰 이미지를 목록에 계속 들고 있지 않도록 원본 파일만 보관하고, 쓸 때마다 하나씩 열어요 */
+async function decodeFull(file) {
+  if (window.createImageBitmap && file.type !== 'image/svg+xml') {
+    try {
+      const b = await createImageBitmap(file);
+      return { src: b, w: b.width, h: b.height, release: () => b.close() };
+    } catch (_) { /* 아래 방식으로 다시 시도 */ }
+  }
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  try {
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = () => rej(new Error('decode'));
+      img.src = url;
+    });
+  } catch (e) {
+    URL.revokeObjectURL(url);
+    throw e;
+  }
+  return { src: img, w: img.naturalWidth || 800, h: img.naturalHeight || 600, release: () => URL.revokeObjectURL(url) };
+}
+async function loadItem(file) {
+  const d = await decodeFull(file);
+  try {
+    const k = Math.min(1, 320 / Math.max(d.w, d.h));
+    const t = document.createElement('canvas');
+    t.width = Math.max(1, Math.round(d.w * k));
+    t.height = Math.max(1, Math.round(d.h * k));
+    t.getContext('2d').drawImage(d.src, 0, 0, t.width, t.height);
+    return { id: ++uid, name: file.name || '붙여넣은 이미지', size: file.size, file, thumb: t, w: d.w, h: d.h, rot: 0, canvas: null };
+  } finally {
+    d.release();
+  }
+}
+const IMG_RE = /\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i;
+const natural = (a, b) => a.localeCompare(b, 'ko', { numeric: true });
+async function addFiles(list, fromFolder) {
+  const all = [...list];
+  if (!all.length) return;
+  const isImg = (f) => /^image\//.test(f.type) || IMG_RE.test(f.name);
+  const ok = all.filter(isImg);
+  const failed = fromFolder ? [] : all.filter((f) => !isImg(f)).map((f) => f.name);
+  if (fromFolder) ok.sort((a, b) => natural(a.webkitRelativePath || a._path || a.name, b.webkitRelativePath || b._path || b.name));
+  if (!ok.length) {
+    note(fromFolder ? '이 폴더에는 추가할 수 있는 이미지가 없어요.' : '이미지 파일만 추가할 수 있어요.', true);
+    return;
+  }
+  const results = new Array(ok.length);
+  let next = 0, done = 0;
+  note('이미지를 불러오는 중이에요… 0 / ' + ok.length);
+  const worker = async () => {
+    while (next < ok.length) {
+      const i = next++;
+      try { results[i] = await loadItem(ok[i]); }
+      catch (e) { failed.push(ok[i].name); }
+      done++;
+      if (done % 4 === 0 || done === ok.length) note('이미지를 불러오는 중이에요… ' + done + ' / ' + ok.length);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, ok.length) }, worker));
+  state.items.push(...results.filter(Boolean));
+  render();
+  const added = results.filter(Boolean).length;
+  if (failed.length) note(added + '장을 추가했어요. 열 수 없어 건너뛴 파일 ' + failed.length + '개: ' + failed.slice(0, 8).join(', ') + (failed.length > 8 ? ' 외' : '') + ' (HEIC는 JPG로 바꿔서 올려 주세요.)', true);
+  else if (added > 20) note(added + '장을 추가했어요.');
+  else note('');
+}
+
+/* 폴더를 끌어다 놓은 경우 안쪽까지 훑어서 파일을 모아요 */
+async function walkEntry(entry, out) {
+  if (entry.isFile) {
+    const f = await new Promise((res, rej) => entry.file(res, rej));
+    f._path = entry.fullPath;
+    out.push(f);
+  } else if (entry.isDirectory) {
+    const reader = entry.createReader();
+    let batch;
+    do {
+      batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+      for (const c of batch) await walkEntry(c, out);
+    } while (batch.length);
+  }
+}
+
+/* ---------- 순서·회전·삭제 ---------- */
+function move(from, to) {
+  if (from === to || to < 0 || to >= state.items.length) return;
+  const [it] = state.items.splice(from, 1);
+  state.items.splice(to, 0, it);
+  render();
+}
+el.grid.addEventListener('click', (e) => {
+  const tile = e.target.closest('#addTile');
+  if (tile) { el.file.click(); return; }
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const li = btn.closest('.card');
+  const idx = state.items.findIndex((it) => it.id === Number(li.dataset.id));
+  if (idx < 0) return;
+  const act = btn.dataset.act;
+  if (act === 'left') move(idx, idx - 1);
+  else if (act === 'right') move(idx, idx + 1);
+  else if (act === 'rotate') {
+    const it = state.items[idx];
+    it.rot = (it.rot + 90) % 360;
+    paintCard(it);
+    if (state.settings.per > 1) paintPage(Math.floor(idx / state.settings.per));
+    hideResult();
+  } else if (act === 'remove') {
+    state.items.splice(idx, 1);
+    render();
+  }
+});
+
+/* 카드 끌어서 순서 바꾸기 */
+let dragId = null, dropTarget = null, dropAfter = false;
+function clearMarks() {
+  el.grid.querySelectorAll('.drop-before,.drop-after,.dragging').forEach((n) => n.classList.remove('drop-before', 'drop-after', 'dragging'));
+}
+el.grid.addEventListener('dragstart', (e) => {
+  const li = e.target.closest('.card');
+  if (!li) return;
+  dragId = Number(li.dataset.id);
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', String(dragId)); } catch (_) {}
+  requestAnimationFrame(() => li.classList.add('dragging'));
+});
+el.grid.addEventListener('dragover', (e) => {
+  if (dragId === null) return;
+  const li = e.target.closest('.card');
+  if (!li) return;
+  e.preventDefault();
+  const r = li.getBoundingClientRect();
+  dropAfter = e.clientX > r.left + r.width / 2;
+  dropTarget = Number(li.dataset.id);
+  el.grid.querySelectorAll('.drop-before,.drop-after').forEach((n) => n.classList.remove('drop-before', 'drop-after'));
+  li.classList.add(dropAfter ? 'drop-after' : 'drop-before');
+});
+el.grid.addEventListener('drop', (e) => {
+  if (dragId === null) return;
+  e.preventDefault();
+  const from = state.items.findIndex((it) => it.id === dragId);
+  let to = state.items.findIndex((it) => it.id === dropTarget);
+  if (from >= 0 && to >= 0) {
+    if (dropAfter) to += 1;
+    if (from < to) to -= 1;
+    move(from, to);
+  }
+  dragId = null; dropTarget = null;
+});
+el.grid.addEventListener('dragend', () => { dragId = null; dropTarget = null; clearMarks(); });
+
+/* 파일 끌어다 놓기, 붙여넣기, 파일 선택 */
+const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+let depth = 0;
+window.addEventListener('dragenter', (e) => { if (hasFiles(e)) { depth++; document.body.classList.add('filedrag'); e.preventDefault(); } });
+window.addEventListener('dragover', (e) => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+window.addEventListener('dragleave', (e) => {
+  if (hasFiles(e)) { depth = Math.max(0, depth - 1); if (!depth) document.body.classList.remove('filedrag'); }
+});
+window.addEventListener('drop', (e) => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  depth = 0;
+  document.body.classList.remove('filedrag');
+  // 드롭 이벤트가 끝나면 항목 정보가 사라지므로 폴더 여부는 먼저 확인해 둠
+  const entries = [...(e.dataTransfer.items || [])].map((i) => (i.webkitGetAsEntry ? i.webkitGetAsEntry() : null));
+  if (entries.some((en) => en && en.isDirectory)) {
+    note('폴더를 읽는 중이에요…');
+    const out = [];
+    Promise.all(entries.filter(Boolean).map((en) => walkEntry(en, out)))
+      .then(() => addFiles(out, true))
+      .catch(() => note('폴더를 읽지 못했어요. 폴더 추가 버튼으로 다시 시도해 주세요.', true));
+  } else {
+    addFiles(e.dataTransfer.files);
+  }
+});
+window.addEventListener('paste', (e) => {
+  const fs = [...(e.clipboardData?.files || [])];
+  if (fs.length && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '')) addFiles(fs);
+});
+el.drop.addEventListener('click', () => el.file.click());
+el.addBtn.addEventListener('click', () => el.file.click());
+el.dirBtn.addEventListener('click', () => el.dir.click());
+el.dirBtn0.addEventListener('click', () => el.dir.click());
+el.file.addEventListener('change', () => { addFiles(el.file.files); el.file.value = ''; });
+el.dir.addEventListener('change', () => { addFiles(el.dir.files, true); el.dir.value = ''; });
+el.sortBtn.addEventListener('click', () => {
+  state.items.sort((a, b) => natural(a.name, b.name));
+  render();
+});
+el.clearBtn.addEventListener('click', () => {
+  state.items = [];
+  note('');
+  render();
+});
+
+/* 설정이 바뀌면 미리보기를 다시 그림 */
+el.settings.addEventListener('change', () => {
+  const prevPer = state.settings.per;
+  let s = readSettings();
+  if (s.per > 1 && s.size === 'image') {
+    el.settings.querySelector('input[name="size"][value="a4"]').checked = true;
+    s = readSettings();
+  }
+  state.settings = s;
+  syncSettingsUi();
+  if (s.per !== prevPer) render();
+  else { paintAll(); hideResult(); }
+});
+
+/* ---------- PDF 만들기 ---------- */
+function canvasToJpeg(canvas, q) {
+  return new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('encode'))), 'image/jpeg', q));
+}
+async function buildPdf(items, s, onProgress) {
+  const Q = QUALITY[s.quality];
+  const canvas = document.createElement('canvas');
+  const pages = [];
+  const total = Math.ceil(items.length / s.per);
+  for (let p = 0; p < total; p++) {
+    const group = items.slice(p * s.per, (p + 1) * s.per);
+    const g0 = groupGeom(group, s);
+    let sc = s.per === 1 && s.size === 'image' ? (4 / 3) * Q.img : Q.dpi / 72;
+    if (g0.wPt * sc * g0.hPt * sc > MAX_PX) sc = Math.sqrt(MAX_PX / (g0.wPt * g0.hPt));
+    const { g, ctx } = prepGroup(canvas, group, s, sc);
+    for (let i = 0; i < group.length; i++) {
+      const d = await decodeFull(group[i].file);
+      try { drawCell(ctx, g, i, group[i], d.src, s); } finally { d.release(); }
+    }
+    const blob = await canvasToJpeg(canvas, Q.q);
+    const jpeg = new Uint8Array(await blob.arrayBuffer());
+    pages.push({ wPt: g.wPt, hPt: g.hPt, pxW: canvas.width, pxH: canvas.height, jpeg });
+    onProgress(p + 1, total);
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  return assemblePdf(pages);
+}
+function fileName() {
+  let n = (el.fname.value || '').replace(/[\\/:*?"<>|]/g, '').trim() || '이미지 모음';
+  if (!/\.pdf$/i.test(n)) n += '.pdf';
+  return n;
+}
+function lockUi(on) {
+  state.building = on;
+  el.settings.querySelectorAll('fieldset').forEach((f) => {
+    f.disabled = on || ((f.id === 'f-orient' || f.id === 'f-fit') && orientFitLocked());
+  });
+  [el.addBtn, el.dirBtn, el.sortBtn, el.clearBtn, el.fname].forEach((b) => { b.disabled = on; });
+  el.grid.querySelectorAll('button').forEach((b) => { b.disabled = on || b.disabled; });
+  el.buildBtn.disabled = on || state.items.length === 0;
+}
+function hideResult() {
+  state.result = null;
+  el.result.hidden = true;
+  el.rmsg.textContent = '';
+}
+function showResult() {
+  const r = state.result;
+  el.rname.textContent = fileName();
+  el.rinfo.textContent = r.pages + '쪽 · ' + formatSize(r.blob.size);
+  el.rmsg.textContent = '';
+  el.result.hidden = false;
+}
+el.buildBtn.addEventListener('click', async () => {
+  if (state.building || !state.items.length) return;
+  hideResult();
+  note('');
+  lockUi(true);
+  el.progress.hidden = false;
+  const items = state.items.slice();
+  const total = Math.ceil(items.length / state.settings.per);
+  el.prog.value = 0;
+  el.prog.max = total;
+  el.progText.textContent = '준비 중…';
+  try {
+    const blob = await buildPdf(items, state.settings, (i, n) => {
+      el.prog.value = i; el.prog.max = n;
+      el.progText.textContent = i + ' / ' + n + '쪽 변환 중';
+    });
+    state.result = { blob, pages: total };
+    showResult();
+  } catch (e) {
+    console.error(e);
+    note('PDF를 만들지 못했어요. 이미지 수나 크기를 줄이거나 화질을 낮춰서 다시 시도해 주세요.', true);
+  } finally {
+    el.progress.hidden = true;
+    lockUi(false);
+  }
+});
+el.saveBtn.addEventListener('click', async () => {
+  const r = state.result;
+  if (!r) return;
+  const name = fileName();
+  el.rname.textContent = name;
+  if (downloads) {
+    try {
+      await downloads.save({ filename: name, data: r.blob });
+      el.rmsg.textContent = '저장했어요.';
+      return;
+    } catch (e) {
+      if (e && e.code === 'declined') { el.rmsg.textContent = '저장을 취소했어요. 필요하면 다시 눌러 주세요.'; return; }
+      if (e && e.code === 'rate_limited') { el.rmsg.textContent = '잠시 뒤에 다시 눌러 주세요.'; return; }
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(r.blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  el.rmsg.textContent = '저장을 요청했어요.';
+});
+
+/* 시작 */
+state.settings = readSettings();
+syncSettingsUi();
+render();
+(async () => {
+  try {
+    if (window.claude && typeof window.claude.use === 'function') downloads = await window.claude.use('downloads');
+  } catch (e) { downloads = null; }
+})();
+</script>
+
+</body>
+</html>

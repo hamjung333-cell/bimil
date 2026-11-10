@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>광고 소재 제작 생성기</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#faf8f5;--card:#fff;--tx:#1c1a17;--mu:#78716c;--bd:#e7e2db;--ac:#e8451e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171513;--card:#211e1b;--tx:#f3efe9;--mu:#a8a29e;--bd:#38332e;--ac:#ff6a45}}
+:root[data-theme="dark"]{--bg:#171513;--card:#211e1b;--tx:#f3efe9;--mu:#a8a29e;--bd:#38332e;--ac:#ff6a45}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Pretendard","Noto Sans KR",system-ui,sans-serif;line-height:1.6}
+.w{max-width:920px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:26px;margin:0 0 4px}.sub{color:var(--mu);margin:0 0 20px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;margin-bottom:16px}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.g{grid-template-columns:1fr}}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit;font-size:14px}
+textarea{min-height:64px;resize:vertical}.full{grid-column:1/-1}
+.hint{font-size:12px;color:var(--mu);margin-top:3px}
+button{font:inherit;cursor:pointer;border-radius:10px;padding:11px 18px;font-weight:700;border:1px solid var(--bd);background:var(--card);color:var(--tx)}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff;font-size:15px}
+button:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#out{white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.75}
+.err{color:var(--ac);font-size:13px}
+</style></head><body><div class="w">
+<h1>🎯 광고 소재 제작 생성기</h1>
+<p class="sub">Attention → Understanding → Interest → Action 기준으로 카피·비주얼·시각적 위계·생성 프롬프트·검수까지 한 번에.</p>
+
+<div class="card"><div class="g">
+<div><label>브랜드 *</label><input id="brand" placeholder="예: ○○ 스킨케어"></div>
+<div><label>제품/서비스 *</label><input id="product" placeholder="예: 수분 장벽 크림"></div>
+<div><label>광고 목적</label><select id="goal"><option>구매 전환</option><option>신제품 인지도</option><option>트래픽 유도</option><option>앱 설치/가입</option><option>프로모션 반응</option><option>브랜드 호감</option></select></div>
+<div><label>채널/소재 형식</label><select id="fmt"><option>인스타 피드 이미지 (4:5)</option><option>릴스/쇼츠 15초 영상</option><option>릴스/쇼츠 30초 영상</option><option>배너 (디스플레이)</option><option>카드뉴스</option><option>상세페이지 상단</option></select></div>
+<div><label>핵심 타겟</label><input id="target" placeholder="예: 건조함 고민 20-30대 여성"></div>
+<div><label>프로모션/CTA</label><input id="promo" placeholder="예: 첫 구매 30% 할인, 지금 받기"></div>
+<div class="full"><label>USP / 소비자 문제·니즈</label><textarea id="usp" placeholder="제품 차별점, 소비자가 겪는 문제, 근거(수치·성분·후기)"></textarea></div>
+<div><label>표현 감성</label><select id="tone"><option value="A">A급 (정제·프리미엄)</option><option value="B">B급 (위트·밈·반전)</option></select></div>
+<div><label>B급 강도 (B급 선택 시)</label><select id="lv"><option value="1">Lv1 세련된 위트</option><option value="2">Lv2 친근한 유머</option><option value="3" selected>Lv3 말장난·상황극</option><option value="4">Lv4 밈·병맛</option><option value="5">Lv5 강한 반전</option></select></div>
+<div><label>소재 개수 / 방식</label><select id="n"><option value="1">1안 (심화)</option><option value="3" selected>3안 (서로 다른 광고 가설)</option><option value="5">5안 (혜택·문제해결·질감·가격·B급)</option></select></div>
+<div><label>이미지 생성 프롬프트</label><select id="pr"><option value="한국어+영문 모두">한국어 + 영문</option><option value="영문만">영문만</option><option value="포함하지 않음">제외</option></select></div>
+</div>
+<div class="row" style="margin-top:14px"><button class="p" id="go">소재 생성하기</button><button id="cp" disabled>결과 복사</button><span class="err" id="er"></span></div>
+</div>
+
+<div class="card" id="res" style="display:none"><div id="out"></div></div>
+</div>
+<script>
+const SYS=`너는 「콘텐츠 크리에이티브 디렉터」다. 실제 제작 가능한 수준으로 광고 소재를 기획한다.
+원칙:
+- 사고 순서: 광고 목적→타겟→인사이트→소구점→표현 감성→이미지 연출→시각적 위계→카피→CTA→제작→검수. 흐름은 Attention→Understanding→Interest/Desire→Action.
+- 소재 1개엔 핵심 소구점 1개. 여러 안이면 카피만 바꾸지 말고 광고 가설 자체를 다르게(혜택/문제해결/질감·사용감/가격·프로모션/B급 후킹 등) 하고, 각 안이 무엇을 테스트하는지 한 줄로 밝힌다.
+- 이미지: 제품이 보이는가보다 '어떤 상태·순간'을 보여줄지 먼저 판단(열린/사용 중/변화 순간/결과/매크로). 정적 패키지컷 지양(프리미엄 등 의도된 경우 예외). 촉감·맛·온도 같은 감각을 시각화하고, 제품보다 변화가 중요한지 판단. 손·행동 활용 검토.
+- 시각적 위계: Hook→핵심 메시지→근거→CTA→브랜드. 모든 걸 강조하지 않는다.
+- 이미지와 카피는 같은 말을 반복하지 않고 보완한다. 카피는 매체 소비 속도에 맞게 짧게.
+- 레이아웃은 제품 위치·크기, 손/모델, 시선 방향, 카피/CTA/로고 위치, 여백, 카메라 앵글·거리, 배경, 조명까지 구체적으로(추상어 '감각적으로/세련되게' 금지).
+- A급=절제·여백·프리미엄. B급=의도적 과장·아이러니·말장난·밈이되 낮은 품질이 아님, 시각적 혼란은 연출해도 정보 우선순위는 명확. 브랜드·제품에 B급이 부적합하면 그 이유를 짧게 말하고 강도를 조정한다.
+- 영상은 첫 1~3초 Hook, 장면 변화, 제품 등장 시점, 변화의 순간, 텍스트 등장 순서, 사운드, CTA 타이밍을 초 단위로 구성한다.
+- 사용자가 준 정보는 되묻지 않고, 부족한 부분은 가정으로 한 줄 명시한다. 존재하지 않는 근거(수치·후기)를 지어내지 않는다.
+출력 형식(각 안마다):
+## 소재 N. (컨셉명)
+[광고 방향] 광고 목적/타겟/핵심 인사이트/핵심 소구점/표현 감성/크리에이티브 컨셉/테스트 가설
+[카피] Hook/Main Copy/Supporting Copy/CTA
+[비주얼] 핵심 장면/제품 상태/제품 행동/모델·손 활용/배경/카메라/시선 유도 포인트
+[시각적 위계] 1~5순위
+[레이아웃] 제작자가 바로 이해할 위치 설명
+[이미지 또는 영상 생성 프롬프트] 피사체·제품 상태·행동·구도·앵글·렌즈·조명·배경·질감·색감·네거티브 스페이스(카피 영역)·현실감 포함
+[검수] 첫 시선/3초 이해도/제품 혜택 전달/시선 분산 요소/개선 포인트
+마지막에 안이 2개 이상이면 'A/B 테스트 제안'을 3줄 이내로 덧붙인다. 마크다운 표는 쓰지 않는다.`;
+const $=id=>document.getElementById(id);let ac=null,last='';
+$('go').onclick=async()=>{
+ $('er').textContent='';
+ if(!$('brand').value.trim()||!$('product').value.trim()){$('er').textContent='브랜드와 제품은 필수입니다.';return}
+ let sample=null;try{sample=await claude.use('sample')}catch(e){}
+ if(!sample){$('er').textContent='이 환경에서는 Claude 호출을 사용할 수 없습니다. claude.ai에서 열어주세요.';return}
+ const v=id=>$(id).value.trim()||'(미입력 - 합리적으로 가정)';
+ const tone=$('tone').value==='B'?`B급 (강도 Lv${$('lv').value})`:'A급';
+ const input=`${SYS}\n\n[요청 정보]\n브랜드: ${v('brand')}\n제품/서비스: ${v('product')}\n광고 목적: ${$('goal').value}\n채널/형식: ${$('fmt').value}\n타겟: ${v('target')}\n프로모션/CTA: ${v('promo')}\nUSP·문제·근거: ${v('usp')}\n표현 감성: ${tone}\n소재 개수: ${$('n').value}안\n생성 프롬프트 언어: ${$('pr').value}\n\n위 정보로 광고 소재를 작성하라.`;
+ $('go').disabled=true;$('cp').disabled=true;$('go').textContent='생성 중…';
+ $('res').style.display='block';$('out').textContent='Claude가 기획 중입니다…';
+ ac=new AbortController();
+ try{
+  const r=await sample(input,{modelTier:'complex',cache:false,signal:ac.signal,onText:({text})=>{last=text;$('out').textContent=text}});
+  last=r.text;$('out').textContent=last;$('cp').disabled=false;
+ }catch(e){
+  if(e&&e.text){last=e.text;$('out').textContent=last;$('cp').disabled=false}
+  $('er').textContent=e&&e.code==='rate_limited'?'요청이 많습니다. 잠시 후 다시 시도하세요.':e&&e.code==='not_granted'?'Claude 사용 권한이 필요합니다.':'생성에 실패했습니다: '+((e&&e.message)||'');
+ }
+ $('go').disabled=false;$('go').textContent='다시 생성하기';
+};
+$('cp').onclick=async()=>{try{await navigator.clipboard.writeText(last);$('cp').textContent='복사됨 ✓'}catch(e){$('cp').textContent='복사 실패'}setTimeout(()=>$('cp').textContent='결과 복사',1500)};
+</script></body></html>

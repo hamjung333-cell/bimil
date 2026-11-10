@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>💣 숫자 지뢰 찾기</title>
+<style>
+:root{--bg:#0b0b10;--fg:#f2f2f5;--mut:#8b8d9c;--cell:#1a1b24;--cellh:#2a2c3b;--safe:#1f7a52;--red:#ff2d3d;--d:0;--fs:clamp(10px,3vw,15px);
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*{box-sizing:border-box}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--fg);font-family:"Noto Sans KR",system-ui,sans-serif;display:flex;justify-content:center;overflow-x:hidden}
+#vig{position:fixed;inset:0;pointer-events:none;box-shadow:inset 0 0 160px 40px var(--red);opacity:0;animation:beat 1s infinite}
+@keyframes beat{0%,100%{opacity:calc(var(--d)*.25)}12%{opacity:calc(var(--d)*.85)}28%{opacity:calc(var(--d)*.3)}40%{opacity:calc(var(--d)*.6)}}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none}
+main{width:100%;max-width:620px;padding:16px 12px 28px;position:relative}
+h1{margin:4px 0 2px;text-align:center;font-size:24px;letter-spacing:-.5px}
+#msg{text-align:center;min-height:44px;font-size:15px;color:var(--mut);margin:6px 0 10px;transition:color .3s}
+#msg.hot{color:var(--red);font-weight:700}
+.setup{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;background:var(--cell);border-radius:12px;padding:10px;margin-bottom:10px}
+.setup label{flex:1;min-width:90px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;gap:4px}
+.setup input{width:100%;background:#0f1017;color:var(--fg);border:1px solid #33354a;border-radius:8px;padding:8px;font:700 16px inherit;font-family:inherit}
+.stats{display:flex;gap:8px;margin-bottom:10px}
+.stat{flex:1;background:var(--cell);border-radius:10px;padding:8px;text-align:center}
+.stat b{display:block;font-size:20px}
+.stat span{font-size:11px;color:var(--mut)}
+#prob b{color:var(--red)}
+#grid{display:grid;gap:4px}
+.c{aspect-ratio:1;border:0;border-radius:6px;background:var(--cell);color:var(--fg);font:700 var(--fs) inherit;font-family:inherit;cursor:pointer;transition:background .15s,transform .1s;padding:0}
+.c:hover:not(:disabled){background:var(--cellh);transform:scale(1.08)}
+.c.pick{background:#7a1520;animation:throb .35s infinite;color:#fff}
+@keyframes throb{50%{transform:scale(1.18);box-shadow:0 0 14px var(--red)}}
+.c.safe{background:var(--safe);color:#bff3d9;cursor:default}
+.c.boom{background:var(--red);color:#fff;animation:pop .5s}
+.c.mine{background:#5a1018;color:#fff}
+.c.line:not(.safe):not(.boom):not(.mine){box-shadow:inset 0 0 0 2px #ffd34d,0 0 10px rgba(255,211,77,.5);color:#ffd34d}
+@keyframes pop{0%{transform:scale(.4)}60%{transform:scale(1.5)}100%{transform:scale(1)}}
+.c:disabled:not(.safe):not(.boom):not(.mine){opacity:.35;cursor:default}
+body.shake main{animation:shake .6s}
+@keyframes shake{0%,100%{transform:none}15%{transform:translate(-10px,6px)}30%{transform:translate(9px,-7px)}45%{transform:translate(-7px,-5px)}60%{transform:translate(6px,6px)}80%{transform:translate(-3px,2px)}}
+.row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+button.ctl{background:var(--cell);color:var(--fg);border:1px solid #33354a;border-radius:10px;padding:10px 16px;font:600 14px inherit;font-family:inherit;cursor:pointer;white-space:nowrap}
+button.ctl.main{background:var(--red);border-color:var(--red)}
+</style>
+</head>
+<body>
+<div id="vig"></div><div id="flash"></div>
+<main>
+  <h1 id="title">💣 숫자 지뢰 찾기</h1>
+  <div id="msg"></div>
+  <div class="setup">
+    <label>전체 숫자 (5~500)<input type="number" id="inN" value="100" min="5" max="500" inputmode="numeric"></label>
+    <label>지뢰 개수<input type="number" id="inM" value="1" min="1" inputmode="numeric"></label>
+    <button class="ctl main" id="apply">적용 · 새 게임</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="ok">0</b><span id="oklbl">생존</span></div>
+    <div class="stat"><b id="left">0</b><span>남은 숫자</span></div>
+    <div class="stat" id="prob"><b>0%</b><span>다음 지뢰 확률</span></div>
+  </div>
+  <div id="grid"></div>
+  <div class="row">
+    <button class="ctl" id="roll">🎲 시작 줄 랜덤</button>
+    <button class="ctl" id="snd">🔊 소리 켜짐</button>
+    <button class="ctl main" id="again" style="display:none">다시 도전</button>
+  </div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let N=100,M=1,mines=new Set(),opened=0,busy=false,over=false,sound=true,actx,hb,cells=[];
+const grid=$('grid');
+let cols=10,rolling=false,rollId=0;
+const LINES=['앞줄(맨 위)','뒷줄(맨 아래)','왼쪽 줄','오른쪽 줄'];
+
+function ac(){if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}return actx}
+function tone(f,d,type='sine',v=.25,slide){
+  if(!sound)return;const a=ac();if(!a)return;
+  const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.value=f;
+  if(slide)o.frequency.exponentialRampToValueAtTime(slide,a.currentTime+d);
+  g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);
+  o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+d);
+}
+function thump(){tone(70,.18,'sine',.5,40);setTimeout(()=>tone(60,.15,'sine',.35,35),170)}
+function boomSnd(){
+  if(!sound)return;const a=ac();if(!a)return;
+  const n=a.sampleRate*1.2,buf=a.createBuffer(1,n,a.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2);
+  const s=a.createBufferSource(),g=a.createGain();s.buffer=buf;g.gain.value=.8;s.connect(g).connect(a.destination);s.start();
+  tone(90,1,'sawtooth',.5,25);
+}
+
+const safeTotal=()=>N-M;
+const danger=()=>Math.min(1,Math.max(opened/safeTotal(),M/(N-opened)));
+function heart(){
+  clearTimeout(hb);
+  const d=danger(),bpm=45+d*110,ms=60000/bpm;
+  $('vig').style.animationDuration=(ms/1000)+'s';
+  if(!over){thump();hb=setTimeout(heart,ms)}
+}
+function setMsg(t,hot){const m=$('msg');m.innerHTML=t;m.className=hot?'hot':''}
+function stats(){
+  const left=N-opened;
+  $('ok').textContent=opened;$('oklbl').textContent='생존 / '+safeTotal();
+  $('left').textContent=left;
+  $('prob').querySelector('b').textContent=Math.min(100,100*M/left).toFixed(1)+'%';
+  document.documentElement.style.setProperty('--d',danger().toFixed(3));
+}
+function stageMsg(n){
+  const safeLeft=safeTotal()-opened,p=M/(N-opened);
+  if(safeLeft<=1)return `안전한 숫자는 단 <b>하나</b> 남았습니다. 나머지는 전부 지뢰입니다.`;
+  if(safeLeft<=3)return `${n}번 안전… 안전한 숫자 ${safeLeft}개 남았습니다. 손이 떨리시나요?`;
+  if(p>=.5)return `${n}번 안전. 이제 동전 던지기보다 위험합니다.`;
+  if(p>=.2)return `${n}번 안전. 심장 소리가 점점 커집니다…`;
+  if(p>=.05)return `${n}번 안전. 확률이 조여 옵니다.`;
+  return `${n}번 안전! 아직은 여유가 있죠?`;
+}
+
+function build(){
+  grid.innerHTML='';cells=[];
+  cols=Math.min(20,Math.max(5,Math.round(Math.sqrt(N))));
+  grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  document.documentElement.style.setProperty('--fs',cols<=10?'clamp(10px,3vw,15px)':cols<=15?'clamp(8px,2.2vw,12px)':'clamp(7px,1.7vw,10px)');
+  for(let i=1;i<=N;i++){const b=document.createElement('button');b.className='c';b.textContent=i;b.dataset.n=i;grid.appendChild(b);cells.push(b)}
+}
+
+function newGame(readInputs){
+  if(readInputs){
+    let n=parseInt($('inN').value)||100;n=Math.min(500,Math.max(5,n));
+    let m=parseInt($('inM').value)||1;m=Math.min(n-1,Math.max(1,m));
+    N=n;M=m;$('inN').value=N;$('inM').value=M;
+  }
+  mines=new Set();while(mines.size<M)mines.add(1+Math.floor(Math.random()*N));
+  opened=0;busy=false;over=false;rolling=false;rollId++;
+  build();
+  $('title').textContent=`💣 ${N} 지뢰 찾기`;
+  $('again').style.display='none';
+  $('vig').style.animation='';$('vig').style.opacity='';
+  setMsg(`1부터 ${N}까지, <b>지뢰 ${M}개</b>가 숨어 있습니다.<br>숫자를 고르세요.`);
+  stats();heart();
+}
+
+grid.addEventListener('click',e=>{
+  const c=e.target.closest('.c');if(!c||busy||over||rolling||c.disabled)return;
+  ac();busy=true;
+  const n=+c.dataset.n,d=danger();
+  c.classList.add('pick');
+  setMsg(`<b>${n}번</b>… 확인 중…`,true);
+  tone(220,.15,'square',.12);
+  const wait=500+d*1500+(safeTotal()-opened<=3?800:0);
+  setTimeout(()=>reveal(c,n),wait);
+});
+
+function reveal(c,n){
+  c.classList.remove('pick');
+  if(mines.has(n)){explode(c,n);return}
+  c.classList.add('safe');c.disabled=true;c.textContent='✓';
+  opened++;busy=false;
+  tone(520,.25,'triangle',.2);setTimeout(()=>tone(780,.3,'triangle',.2),120);
+  stats();
+  if(opened===safeTotal()){
+    over=true;clearTimeout(hb);
+    cells.forEach(x=>{if(mines.has(+x.dataset.n)){x.className='c mine';x.textContent='💣';x.disabled=true}});
+    setMsg(`🏆 <b>전설의 생존!</b> 지뢰 ${M}개를 모두 피했습니다.`,true);
+    $('again').style.display='';return;
+  }
+  setMsg(stageMsg(n),M/(N-opened)>=.2);heart();
+}
+
+function explode(c,n){
+  over=true;clearTimeout(hb);
+  cells.forEach(x=>{if(!x.classList.contains('safe')){x.disabled=true;if(mines.has(+x.dataset.n)&&x!==c){x.className='c mine';x.textContent='💣'}}});
+  c.className='c boom';c.textContent='💥';
+  document.documentElement.style.setProperty('--d','1');
+  $('vig').style.animation='none';$('vig').style.opacity='1';
+  $('flash').animate([{opacity:1},{opacity:0}],{duration:700});
+  document.body.classList.add('shake');setTimeout(()=>document.body.classList.remove('shake'),700);
+  boomSnd();
+  setMsg(`💀 <b>${n}번이 지뢰였습니다.</b><br>${opened}개를 넘기고 폭발했습니다.`,true);
+  $('again').style.display='';
+  setTimeout(()=>{$('vig').style.opacity='.25'},1200);
+}
+
+function lineCells(k){
+  const rows=Math.ceil(N/cols);
+  return cells.filter((_,i)=>{const r=Math.floor(i/cols),c=i%cols;
+    return k===0?r===0:k===1?r===rows-1:k===2?c===0:c===cols-1});
+}
+function showLine(k){cells.forEach(x=>x.classList.remove('line'));lineCells(k).forEach(x=>x.classList.add('line'))}
+function rollLine(){
+  if(over||busy||rolling)return;
+  ac();rolling=true;const id=++rollId;
+  const total=14+Math.floor(Math.random()*4),fin=Math.floor(Math.random()*4);
+  const kAt=s=>(((fin-(total-1-s))%4)+4)%4;
+  (function tick(s){
+    if(id!==rollId)return;
+    const k=kAt(s);showLine(k);
+    setMsg(`🎲 <b>${LINES[k]}</b>…`,true);
+    tone(300+k*60,.08,'square',.1);
+    if(s<total-1){setTimeout(()=>tick(s+1),70+s*s*1.3)}
+    else{
+      rolling=false;
+      tone(660,.3,'triangle',.25);setTimeout(()=>tone(990,.4,'triangle',.25),140);
+      setMsg(`🎯 <b>${LINES[k]}</b>부터 시작하세요!<br>노란 테두리 숫자 중에서 고르세요.`,true);
+    }
+  })(0);
+}
+$('roll').onclick=rollLine;
+$('apply').onclick=()=>newGame(true);
+$('again').onclick=()=>newGame(true);
+$('snd').onclick=()=>{sound=!sound;$('snd').textContent=sound?'🔊 소리 켜짐':'🔇 소리 꺼짐'};
+newGame(true);
+</script>
+</body>
+</html>

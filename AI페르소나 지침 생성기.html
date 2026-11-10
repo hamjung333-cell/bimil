@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>나의 AI 페르소나 지침서</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;0,600;1,500&family=Noto+Serif+KR:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #FFFFFF;
+    --card: #FFFFFF;
+    --ink: #1B1A17;
+    --ink-soft: #78725F;
+    --label: #A29C89;
+    --placeholder: #B4AD98;
+    --line: #E9E5D6;
+    --accent: #C08A2E;
+    --answer: #2554E8;
+    --accent-soft: #FBF1DC;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Noto Sans KR', sans-serif;
+    padding:56px 20px 100px;
+    min-height:100vh;
+  }
+
+  .sheet{ max-width:800px; margin:0 auto; }
+
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:0.18em;
+    color:var(--accent);
+    font-weight:600;
+    margin-bottom:14px;
+  }
+  .masthead{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    gap:24px; flex-wrap:wrap;
+    border-bottom:1px solid var(--ink);
+    padding-bottom:22px;
+    margin-bottom:8px;
+  }
+  .masthead h1{
+    font-family:'Noto Serif KR', serif;
+    font-weight:700;
+    font-size:32px;
+    margin:0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  .masthead p{ margin:0; font-size:13.5px; color:var(--ink-soft); line-height:1.7; max-width:440px; }
+  .filecode{
+    font-size:11px; letter-spacing:0.06em;
+    color:var(--label);
+    text-align:right; white-space:nowrap;
+    padding-bottom:6px; line-height:1.8;
+  }
+
+  .idline{
+    display:flex; gap:16px; align-items:center;
+    margin:28px 0 40px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--line);
+  }
+  .idline .label{
+    font-size:14px; letter-spacing:0; color:var(--ink);
+    font-weight:700; white-space:nowrap;
+  }
+  .idline input{
+    flex:1;
+    border:none;
+    background:transparent;
+    font-family:'Noto Serif KR', serif;
+    font-size:19px; font-weight:700;
+    padding:2px 0; color:var(--answer);
+  }
+  .idline input:focus{ outline:none; }
+
+  .legend{
+    display:flex; gap:32px; flex-wrap:wrap;
+    font-size:23px; font-weight:600; color:var(--ink-soft);
+    margin:-20px 0 34px;
+  }
+  .legend span{ display:inline-flex; align-items:center; gap:10px; }
+  .legend i{ width:20px; height:20px; display:inline-block; border-radius:4px; }
+  .legend .i-label{ background:var(--ink); }
+  .legend .i-example{ background:var(--placeholder); }
+
+  .tab{
+    display:flex; align-items:baseline; gap:14px;
+    margin:52px 0 20px;
+  }
+  .tab .num{
+    font-family:'Newsreader', serif;
+    font-style:italic;
+    font-weight:500;
+    font-size:15px;
+    color:var(--accent);
+    min-width:20px;
+  }
+  .tab h2{
+    font-family:'Noto Serif KR', serif;
+    font-size:18.5px; margin:0; font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .tab .sub{
+    font-size:11.5px; color:var(--label); margin-left:auto;
+    text-align:right; letter-spacing:0.02em;
+  }
+  .tab-rule{ border:none; border-top:1px solid var(--line); margin:0 0 20px; }
+
+  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:stretch; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:stretch; }
+  @media (max-width:680px){ .grid3, .grid2{ grid-template-columns:1fr; } }
+
+  .field{
+    display:flex;
+    flex-direction:column;
+    background:var(--card);
+    border:1px solid var(--line);
+    box-shadow:0 1px 3px rgba(27,26,23,0.04);
+    padding:18px 18px 16px;
+  }
+  .grid2 > .field + .field, .grid3 > .field + .field, .grid-a > .field + .field{ margin-top:0; }
+  .field + .field{ margin-top:12px; }
+
+  .field label, .field-label{
+    display:block;
+    font-size:13.5px;
+    letter-spacing:0;
+    color:var(--ink);
+    font-weight:700;
+    margin-bottom:8px;
+  }
+
+  /* ---- 질문 문구 직접 수정 (수정 버튼을 눌러야 편집 가능) ---- */
+  .q-label, .q-h2{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+  }
+  .field label.q-label{ display:flex; }
+  .field-label{
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+  .q-text{
+    outline:none;
+    border-radius:4px;
+    padding:1px 4px;
+    margin-left:-4px;
+    border-bottom:1px dashed transparent;
+  }
+  .q-text[contenteditable="true"]{
+    cursor:text;
+    background:var(--accent-soft);
+    border-bottom-color:var(--accent);
+  }
+  .edit-q-btn{
+    flex:none;
+    width:22px; height:22px;
+    border:1px solid var(--line);
+    background:var(--card);
+    color:var(--label);
+    border-radius:5px;
+    font-size:11px;
+    line-height:1;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    transition:opacity .12s ease, background .12s ease, color .12s ease, border-color .12s ease;
+  }
+  .q-label:hover .edit-q-btn,
+  .field-label:hover .edit-q-btn,
+  .q-h2:hover .edit-q-btn,
+  .edit-q-btn:focus-visible,
+  .edit-q-btn.active{
+    opacity:1;
+  }
+  .edit-q-btn:hover{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  .edit-q-btn.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  .edit-hint{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin:-20px 0 34px;
+  }
+  .edit-hint b{ color:var(--accent); font-weight:600; }
+
+  .field input[type=text], .field textarea{
+    width:100%;
+    border:none;
+    background:transparent;
+    font-family:'Noto Sans KR', sans-serif;
+    font-size:14.5px;
+    font-weight:700;
+    color:var(--answer);
+    resize:none;
+    padding:0;
+    line-height:1.6;
+  }
+  .field input[type=text]:focus, .field textarea:focus{ outline:none; }
+  .field textarea{ min-height:44px; flex:1; }
+
+  ::placeholder{
+    color:var(--placeholder) !important;
+    font-weight:400 !important;
+    font-style:normal;
+    opacity:1 !important;
+  }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:9px; margin-bottom:16px; }
+  .chip{
+    font-size:13px;
+    font-weight:500;
+    padding:8px 16px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:var(--card);
+    color:var(--ink-soft);
+    cursor:pointer;
+    user-select:none;
+    transition:all .15s ease;
+  }
+  .chip:hover{ border-color:var(--accent); color:var(--ink); }
+  .chip.on{
+    background:var(--ink);
+    color:var(--bg);
+    border-color:var(--ink);
+  }
+
+  textarea.wide{
+    width:100%;
+    min-height:60px;
+    border:1px solid var(--line);
+    box-shadow:0 1px 3px rgba(27,26,23,0.04);
+    background:var(--card);
+    font-family:'Noto Sans KR', sans-serif;
+    font-size:14.5px;
+    font-weight:700;
+    line-height:1.65;
+    padding:16px 18px;
+    resize:vertical;
+    color:var(--answer);
+  }
+  textarea.wide:focus{ outline:none; border-color:var(--accent); }
+
+  .oneliner{
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px;
+    font-family:'Noto Serif KR', serif;
+    font-size:16.5px;
+    line-height:2.1;
+    color:var(--ink-soft);
+  }
+  .oneliner input{
+    border:none; border-bottom:1px solid var(--ink);
+    background:transparent;
+    font-family:'Noto Serif KR', serif;
+    font-size:16.5px; font-weight:700;
+    color:var(--answer);
+    padding:2px 6px;
+    min-width:140px;
+  }
+  .oneliner input:focus{ outline:none; }
+  .oneliner input::placeholder{ font-weight:400; }
+
+  .cta-row{
+    margin-top:56px;
+    display:flex; justify-content:center;
+    padding-top:36px;
+    border-top:1px solid var(--line);
+  }
+  .cta-btn{
+    font-size:13.5px; font-weight:600;
+    letter-spacing:0.1em;
+    color:var(--bg);
+    background:var(--ink);
+    border:1px solid var(--ink);
+    padding:16px 40px;
+    cursor:pointer;
+    transition:all .18s ease;
+  }
+  .cta-btn:hover{ background:var(--accent); border-color:var(--accent); }
+
+  .output-wrap{ display:none; margin-top:48px; }
+  .output-wrap.show{ display:block; }
+  .output-head{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:14px; gap:10px; flex-wrap:wrap;
+  }
+  .output-head h2{
+    font-family:'Noto Serif KR', serif; font-size:19px; margin:0; font-weight:700;
+  }
+  .btnrow{ display:flex; gap:8px; }
+  .smallbtn{
+    font-size:12px; font-weight:600; letter-spacing:0.03em;
+    border:1px solid var(--ink);
+    background:var(--card);
+    padding:8px 14px;
+    cursor:pointer;
+    color:var(--ink);
+    transition:all .15s ease;
+  }
+  .smallbtn:hover{ background:var(--ink); color:var(--bg); }
+  .smallbtn.copied{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  /* #output legacy sizing rules removed — .preview-body now controls layout,
+     and font-size is auto-fit by JS (see autoFitPreview) so long prompts
+     shrink to fit the box instead of forcing an inner scroll. */
+
+  .hint{ font-size:12px; color:var(--ink-soft); margin-top:16px; line-height:1.7; }
+
+  .part-divider{
+    margin:64px 0 30px;
+    padding-top:34px;
+    border-top:3px solid var(--ink);
+  }
+  .part-divider .part-eyebrow{
+    font-size:11px; letter-spacing:0.18em; color:var(--accent);
+    font-weight:600; margin-bottom:8px;
+  }
+  .part-divider h2{
+    font-family:'Noto Serif KR', serif;
+    font-size:23px; font-weight:700; margin:0 0 6px;
+  }
+  .part-divider p{ margin:0; font-size:13px; color:var(--ink-soft); }
+
+  .grid-a{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px; align-items:stretch; }
+  @media (max-width:680px){ .grid-a{ grid-template-columns:1fr; } }
+
+  .sentence-line{
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px;
+    font-family:'Noto Serif KR', serif;
+    font-size:16px; line-height:2;
+    color:var(--ink-soft);
+    margin-top:14px;
+  }
+  .sentence-line input{
+    border:none; border-bottom:1px solid var(--ink);
+    background:transparent;
+    font-family:'Noto Serif KR', serif;
+    font-size:16px; font-weight:700;
+    color:var(--answer);
+    padding:2px 6px;
+    min-width:130px;
+  }
+  .sentence-line input:focus{ outline:none; }
+
+  /* ---- Two-column layout: left UI / right live preview ---- */
+  .layout{
+    display:grid;
+    grid-template-columns: minmax(0,1fr) 420px;
+    gap:40px;
+    max-width:1360px;
+    margin:0 auto;
+    align-items:start;
+  }
+  .panel-left{ min-width:0; }
+
+  .panel-right{
+    position:sticky;
+    top:28px;
+    align-self:start;
+    height:calc(100vh - 56px);
+    display:flex;
+    flex-direction:column;
+    background:var(--ink);
+    border:1px solid var(--ink);
+    box-shadow:0 1px 3px rgba(27,26,23,0.04);
+  }
+  .preview-head{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap:12px; flex-wrap:wrap;
+    padding:22px 24px 16px;
+    border-bottom:1px solid rgba(239,233,216,0.16);
+  }
+  .preview-head .eyebrow{ margin-bottom:6px; }
+  .preview-title{
+    font-family:'Noto Serif KR', serif;
+    font-size:18px; font-weight:700; margin:0;
+    color:#EFE9D8;
+  }
+  .preview-head .btnrow .smallbtn{
+    border-color:#8A8471; color:#EFE9D8; background:transparent;
+  }
+  .preview-head .btnrow .smallbtn:hover{ background:#EFE9D8; color:var(--ink); border-color:#EFE9D8; }
+  .preview-head .btnrow .smallbtn.copied{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  .preview-body{
+    flex:1;
+    min-height:0; /* required for flex child to actually shrink instead of overflowing parent */
+    overflow-y:auto;
+    color:#EFE9D8;
+    font-family:'Noto Sans KR', sans-serif;
+    font-size:13.5px;
+    line-height:1.85;
+    padding:22px 24px 26px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    transition:font-size .12s ease, line-height .12s ease;
+  }
+
+  .panel-right .hint{
+    padding:14px 24px 20px;
+    border-top:1px solid rgba(239,233,216,0.16);
+    color:#9A9480;
+    margin:0;
+  }
+
+  @media (max-width:1100px){
+    .layout{ grid-template-columns:1fr; gap:0; max-width:800px; }
+    .panel-right{
+      position:static;
+      height:auto;
+      max-height:56vh;
+      margin-top:48px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+<div class="panel-left">
+<div class="sheet">
+
+  <div class="eyebrow">AI CLONE · PROMPT BUILDER</div>
+  <div class="masthead">
+    <div>
+      <h1>나의 AI 페르소나 지침서</h1>
+      <p>내 사업과 고객을 먼저 정리하고, 그 위에 판단 기준을 가르쳐 바로 쓸 수 있는 프롬프트(지침)로 만듭니다.</p>
+    </div>
+    <div class="filecode">FILE NO. AI-01<br>나의 AI 페르소나 만들기</div>
+  </div>
+
+  <div class="idline">
+    <span class="label">AI 페르소나의 이름</span>
+    <input type="text" id="cloneName" placeholder="예: 소망이, 지니, OO상담원 — 미입력 시 '나의 AI 페르소나'">
+  </div>
+
+  <div class="legend">
+    <span><i class="i-label"></i>질문 (검정 굵은 글씨)</span>
+    <span><i class="i-example"></i>답변 예시 (회색 글씨 — 여기에 직접 입력하세요)</span>
+  </div>
+  <div class="edit-hint"><b>Tip.</b> 질문 문구 옆의 <b>✎</b> 버튼을 누르면 그 질문을 원하는 문구로 직접 바꿀 수 있어요. 다 고쳤으면 Enter를 누르거나 다른 곳을 클릭하면 저장됩니다.</div>
+
+  <div class="part-divider">
+    <div class="part-eyebrow">PART 1</div>
+    <h2>나를 이해하는 재료 모으기</h2>
+    <p>AI에게 나를 가르치기 전에, 내 사업과 고객부터 천천히 꺼내봅니다.</p>
+  </div>
+
+  <!-- 1. 사업 소개 -->
+  <div class="tab"><span class="num">01</span><h2 class="q-h2"><span class="q-text" spellcheck="false">나는 어떤 사업을 하고 있나요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></h2></div>
+  <hr class="tab-rule">
+  <div class="idline" style="margin:0 0 18px;">
+    <span class="label">회사 / 브랜드 이름</span>
+    <input type="text" id="bizName" placeholder="예: 카페 소보로">
+  </div>
+  <div class="field-label"><span class="q-text" spellcheck="false">우리 사업을 처음 듣는 사람에게 한 문장으로 설명한다면?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></div>
+  <textarea class="wide" id="oneLinerDesc" placeholder="예: 매일 바쁜 직장인들에게, 부담 없이 즐길 수 있는 맛있는 커피 한 잔을 내려드립니다"></textarea>
+  <div class="sentence-line">
+    <input type="text" id="oneLinerAudience" placeholder="예: 근처 직장인들">
+    에게
+    <input type="text" id="oneLinerValue" placeholder="예: 부담 없이 즐기는 좋은 커피">
+    을(를) 제공합니다.
+  </div>
+
+  <!-- 2. 핵심 고객 -->
+  <div class="tab"><span class="num">02</span><h2 class="q-h2"><span class="q-text" spellcheck="false">내가 가장 돕고 싶은 고객은 누구인가요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></h2><span class="sub">막연한 '모든 고객' 말고, 지금 가장 신경 쓰이는 한 사람</span></div>
+  <hr class="tab-rule">
+  <div class="grid-a">
+    <div class="field">
+      <label class="q-label"><span class="q-text" spellcheck="false">그 고객은 어떤 사람이며 어떤 상황에 있나요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></label>
+      <textarea id="custWho" placeholder="예: 점심시간마다 카페인이 필요한 30대 직장인, 커피 취향이 확실하다"></textarea>
+    </div>
+    <div class="field">
+      <label class="q-label"><span class="q-text" spellcheck="false">지금 가장 답답해하거나 해결하고 싶은 문제는?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></label>
+      <textarea id="custProblem" placeholder="예: 매번 비슷한 프랜차이즈 커피에 질렸고, 조용히 쉴 곳이 필요하다"></textarea>
+    </div>
+  </div>
+  <div class="field-label"><span class="q-text" spellcheck="false">우리와 인연을 맺은 뒤, 고객에게 어떤 변화가 생기면 좋을까요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></div>
+  <textarea class="wide" id="custChange" placeholder="예: 하루 중 가장 편안한 휴식 시간을 갖게 된다"></textarea>
+
+  <!-- 3. 선택받는 이유 -->
+  <div class="tab"><span class="num">03</span><h2 class="q-h2"><span class="q-text" spellcheck="false">고객이 나를 선택하는 진짜 이유는 무엇인가요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></h2><span class="sub">가격·기능이 아니라 '그래서 당신에게 맡기고 싶다'고 느끼는 이유</span></div>
+  <hr class="tab-rule">
+  <textarea class="wide" id="whyChosen" placeholder="예: 항상 제 이름과 취향을 기억해주고, 편하게 챙겨줘서"></textarea>
+
+  <!-- 4. 경험과 강점 -->
+  <div class="tab"><span class="num">04</span><h2 class="q-h2"><span class="q-text" spellcheck="false">나를 설명하는 경험과 강점</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></h2><span class="sub">잘하는 기술만이 아니라, 쌓아온 경험과 일하는 태도까지</span></div>
+  <hr class="tab-rule">
+  <div class="grid3">
+    <div class="field">
+      <label class="q-label"><span class="q-text" spellcheck="false">내가 잘 해결하는 문제</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></label>
+      <textarea id="strengthProblem" placeholder="예: 원두 상태와 날씨에 맞춰 최상의 맛을 뽑아낸다"></textarea>
+    </div>
+    <div class="field">
+      <label class="q-label"><span class="q-text" spellcheck="false">사람들이 자주 부탁하는 일</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></label>
+      <textarea id="strengthAsk" placeholder="예: 디카페인 추천, 선물용 원두 포장, 자리 맡아두기"></textarea>
+    </div>
+    <div class="field">
+      <label class="q-label"><span class="q-text" spellcheck="false">일할 때 꼭 지키는 태도</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></label>
+      <textarea id="strengthAttitude" placeholder="예: 약속한 시간은 반드시 지킨다"></textarea>
+    </div>
+  </div>
+
+  <div class="part-divider">
+    <div class="part-eyebrow">PART 2</div>
+    <h2>AI 페르소나에게 기준 가르치기</h2>
+    <p>앞에서 꺼낸 내용을 바탕으로, AI가 나답게 말하고 판단하도록 기준을 정합니다.</p>
+  </div>
+
+  <!-- 5. 판단 기준 -->
+  <div class="tab"><span class="num">05</span><h2 class="q-h2"><span class="q-text" spellcheck="false">내가 일을 판단하는 3가지 기준</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></h2><span class="sub">결정·검토 시 반복해서 보는 기준</span></div>
+  <hr class="tab-rule">
+  <div class="grid3">
+    <div class="field">
+      <label class="q-label"><span class="q-text" spellcheck="false">기준 1 · 무엇을 중요하게 보나요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></label>
+      <input type="text" id="c1name" placeholder="예: 신뢰성">
+      <div class="field-label" style="margin-top:28px"><span class="q-text" spellcheck="false">왜 중요한가요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></div>
+      <textarea id="c1why" placeholder="예: 고객이 안심하고 맡길 수 있어야 하니까"></textarea>
+    </div>
+    <div class="field">
+      <label class="q-label"><span class="q-text" spellcheck="false">기준 2 · 무엇을 중요하게 보나요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></label>
+      <input type="text" id="c2name" placeholder="예: 원칙">
+      <div class="field-label" style="margin-top:28px"><span class="q-text" spellcheck="false">왜 중요한가요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></div>
+      <textarea id="c2why" placeholder="예: 상황마다 말이 바뀌면 신뢰가 무너지니까"></textarea>
+    </div>
+    <div class="field">
+      <label class="q-label"><span class="q-text" spellcheck="false">기준 3 · 무엇을 중요하게 보나요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></label>
+      <input type="text" id="c3name" placeholder="예: 일관성">
+      <div class="field-label" style="margin-top:28px"><span class="q-text" spellcheck="false">왜 중요한가요?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></div>
+      <textarea id="c3why" placeholder="예: 누가 물어봐도 같은 기준으로 답해야 하니까"></textarea>
+    </div>
+  </div>
+
+  <!-- 6. 말투와 태도 -->
+  <div class="tab"><span class="num">06</span><h2 class="q-h2"><span class="q-text" spellcheck="false">나다운 말투와 태도</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></h2><span class="sub">고객·직원에게 주고 싶은 인상</span></div>
+  <hr class="tab-rule">
+  <div class="chips" id="toneChips">
+    <div class="chip" data-v="따뜻한">따뜻한</div>
+    <div class="chip" data-v="친근한">친근한</div>
+    <div class="chip" data-v="단호한">단호한</div>
+    <div class="chip" data-v="전문적인">전문적인</div>
+    <div class="chip" data-v="논리적인">논리적인</div>
+    <div class="chip" data-v="간결한">간결한</div>
+  </div>
+  <textarea class="wide" id="speechStyle" placeholder="예: 무리한 요구에도 존댓말을 유지하고, 결론부터 말한 뒤 이유를 설명한다"></textarea>
+
+  <!-- 7. 하지 않았으면 하는 것 -->
+  <div class="tab"><span class="num">07</span><h2 class="q-h2"><span class="q-text" spellcheck="false">AI 페르소나가 절대 하지 않았으면 하는 것</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></h2><span class="sub">과장·단정·무례한 표현 등 반드시 지킬 선</span></div>
+  <hr class="tab-rule">
+  <textarea class="wide" id="neverDo" placeholder="예: 원칙에서 벗어난 일관성 없는 답변이나 근거 없는 약속을 하지 않는다"></textarea>
+
+  <!-- 8. 첫 업무 -->
+  <div class="tab"><span class="num">08</span><h2 class="q-h2"><span class="q-text" spellcheck="false">AI 페르소나에게 가장 먼저 맡기고 싶은 일</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></h2><span class="sub">반복되지만 대표님의 기준이 필요한 실제 업무</span></div>
+  <hr class="tab-rule">
+  <div class="grid2">
+    <div class="field">
+      <label class="q-label"><span class="q-text" spellcheck="false">맡기고 싶은 업무는?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></label>
+      <textarea id="task" placeholder="예: 고객의 마음을 공감해주기"></textarea>
+    </div>
+    <div class="field">
+      <label class="q-label"><span class="q-text" spellcheck="false">이 일을 잘하려면 꼭 알아야 할 것은?</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></label>
+      <textarea id="taskContext" placeholder="예: 고객이 겪는 어려움과 자주 하는 질문"></textarea>
+    </div>
+  </div>
+
+  <!-- 9. 한 문장 정의 -->
+  <div class="tab"><span class="num">09</span><h2 class="q-h2"><span class="q-text" spellcheck="false">한 문장으로 나의 AI 페르소나 정의하기</span><button type="button" class="edit-q-btn" aria-label="질문 수정" title="질문 수정">✎</button></h2></div>
+  <hr class="tab-rule">
+  <div class="oneliner">
+    나의 AI 페르소나는
+    <input type="text" id="defWhat" placeholder="예: 나의 고객경험">
+    을(를) 이해하고,
+    <input type="text" id="defHow" placeholder="예: 다정하고 분명한">
+    한 방식으로 나를 돕는다.
+  </div>
+
+
+</div>
+</div>
+
+<div class="panel-right">
+  <div class="preview-head">
+    <div>
+      <div class="eyebrow">실시간 미리보기</div>
+      <h2 class="preview-title">완성된 프롬프트</h2>
+    </div>
+    <div class="btnrow">
+      <button class="smallbtn" id="copyBtn" onclick="copyOutput()">복사하기</button>
+      <button class="smallbtn" onclick="downloadOutput()">.txt 다운로드</button>
+    </div>
+  </div>
+  <div id="output" class="preview-body"></div>
+  <div class="hint">이 텍스트를 그대로 복사해서 챗봇 빌더(Claude Project, GPTs, 카카오톡 챗봇 등)의 '지침 / System Prompt' 란에 붙여넣으면 됩니다.</div>
+</div>
+
+</div>
+
+<script>
+document.querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click', ()=>{
+    c.classList.toggle('on');
+    renderPreview();
+  });
+});
+
+document.querySelectorAll('.panel-left input[type=text], .panel-left textarea').forEach(el=>{
+  el.addEventListener('input', renderPreview);
+});
+
+// 질문 문구(label / field-label / tab 제목) 수정 버튼
+// ✎ 버튼을 눌러야만 편집 가능해지고, Enter를 누르거나 다른 곳을 클릭하면 저장되고 다시 잠깁니다.
+document.querySelectorAll('.edit-q-btn').forEach(btn=>{
+  const qText = btn.previousElementSibling; // 바로 앞의 .q-text
+  if(!qText || !qText.classList.contains('q-text')) return;
+
+  function startEdit(){
+    qText.setAttribute('contenteditable', 'true');
+    qText.spellcheck = false;
+    btn.classList.add('active');
+    btn.textContent = '✓';
+    btn.title = '수정 완료';
+    qText.focus();
+    // 커서를 텍스트 끝으로 이동
+    const range = document.createRange();
+    range.selectNodeContents(qText);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function stopEdit(){
+    qText.setAttribute('contenteditable', 'false');
+    btn.classList.remove('active');
+    btn.textContent = '✎';
+    btn.title = '질문 수정';
+    const trimmed = qText.textContent.trim();
+    if(trimmed) qText.textContent = trimmed;
+  }
+
+  btn.addEventListener('click', ()=>{
+    const editing = qText.getAttribute('contenteditable') === 'true';
+    if(editing){ stopEdit(); } else { startEdit(); }
+  });
+
+  qText.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      stopEdit();
+    } else if(e.key === 'Escape'){
+      e.preventDefault();
+      stopEdit();
+    }
+  });
+
+  qText.addEventListener('blur', ()=>{
+    if(qText.getAttribute('contenteditable') === 'true') stopEdit();
+  });
+
+  qText.addEventListener('paste', (e)=>{
+    // 서식 없는 순수 텍스트로만 붙여넣기
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+  });
+});
+
+function val(id){ return document.getElementById(id).value.trim(); }
+
+function renderPreview(){
+  const name = val('cloneName') || '나의 AI 페르소나';
+
+  const bizName = val('bizName');
+  const oneLinerDesc = val('oneLinerDesc');
+  const oneLinerAudience = val('oneLinerAudience');
+  const oneLinerValue = val('oneLinerValue');
+  const custWho = val('custWho');
+  const custProblem = val('custProblem');
+  const custChange = val('custChange');
+  const whyChosen = val('whyChosen');
+  const strengthProblem = val('strengthProblem');
+  const strengthAsk = val('strengthAsk');
+  const strengthAttitude = val('strengthAttitude');
+
+  const criteria = [
+    {n: val('c1name'), w: val('c1why')},
+    {n: val('c2name'), w: val('c2why')},
+    {n: val('c3name'), w: val('c3why')},
+  ].filter(c=>c.n);
+
+  const tones = Array.from(document.querySelectorAll('.chip.on')).map(c=>c.dataset.v);
+  const speechStyle = val('speechStyle');
+  const neverDo = val('neverDo');
+  const task = val('task');
+  const taskContext = val('taskContext');
+  const defWhat = val('defWhat');
+  const defHow = val('defHow');
+
+  let lines = [];
+  lines.push(`당신은 대표님을 대신하는 AI 페르소나, "${name}"입니다.`);
+  lines.push(`아래의 사업 정보와 판단 기준에 따라 생각하고, 답하고, 결정하세요.`);
+  lines.push('');
+
+  if(bizName || oneLinerDesc || oneLinerAudience || oneLinerValue){
+    lines.push(`[01. 사업 정보]`);
+    if(bizName) lines.push(`- 브랜드: ${bizName}`);
+    if(oneLinerDesc) lines.push(`- 한 문장 소개: ${oneLinerDesc}`);
+    if(oneLinerAudience || oneLinerValue) lines.push(`- 핵심 가치: ${oneLinerAudience || '고객'}에게 ${oneLinerValue || '가치'}을(를) 제공한다.`);
+    lines.push('');
+  }
+
+  if(custWho || custProblem || custChange){
+    lines.push(`[02. 핵심 고객] — 아래와 같은 고객을 가장 먼저 생각하며 응대한다.`);
+    if(custWho) lines.push(`- 고객 상황: ${custWho}`);
+    if(custProblem) lines.push(`- 가장 답답해하는 문제: ${custProblem}`);
+    if(custChange) lines.push(`- 우리가 만들고 싶은 변화: ${custChange}`);
+    lines.push('');
+  }
+
+  if(whyChosen){
+    lines.push(`[03. 고객이 선택하는 이유] — 이 강점이 드러나도록 응대한다.`);
+    lines.push(`- ${whyChosen}`);
+    lines.push('');
+  }
+
+  if(strengthProblem || strengthAsk || strengthAttitude){
+    lines.push(`[04. 경험과 강점]`);
+    if(strengthProblem) lines.push(`- 잘 해결하는 문제: ${strengthProblem}`);
+    if(strengthAsk) lines.push(`- 자주 부탁받는 일: ${strengthAsk}`);
+    if(strengthAttitude) lines.push(`- 일할 때 지키는 태도: ${strengthAttitude}`);
+    lines.push('');
+  }
+
+  if(criteria.length){
+    lines.push(`[05. 판단 기준] — 결정을 내리거나 결과물을 검토할 때 아래 기준을 항상 우선한다.`);
+    criteria.forEach((c,i)=>{
+      lines.push(`${i+1}. ${c.n}${c.w ? ' — ' + c.w : ''}`);
+    });
+    lines.push('');
+  }
+
+  if(tones.length || speechStyle){
+    lines.push(`[06. 말투와 태도]`);
+    if(tones.length) lines.push(`- 톤: ${tones.join(', ')}`);
+    if(speechStyle) lines.push(`- 자주 쓰는 표현 / 말하는 방식: ${speechStyle}`);
+    lines.push('');
+  }
+
+  if(neverDo){
+    lines.push(`[07. 절대 하지 않을 것]`);
+    lines.push(`- ${neverDo}`);
+    lines.push('');
+  }
+
+  if(task){
+    lines.push(`[08. 가장 먼저 맡을 업무]`);
+    lines.push(`- 업무: ${task}`);
+    if(taskContext) lines.push(`- 이 일을 잘하기 위해 반드시 알아야 할 것: ${taskContext}`);
+    lines.push('');
+  }
+
+  if(defWhat || defHow){
+    lines.push(`[09. 정의]`);
+    lines.push(`${name}은(는) ${defWhat || '대표님의 업무'}를(을) 이해하고, ${defHow || '대표님다운'} 방식으로 대표님을 돕는다.`);
+    lines.push('');
+  }
+
+  lines.push(`위 기준과 원칙을 벗어난 요청을 받으면, 그 사실을 분명히 밝히고 대표님이라면 어떻게 판단했을지를 먼저 생각한 뒤 답하세요.`);
+
+  const text = lines.join('\n');
+  const output = document.getElementById('output');
+  output.textContent = text;
+  autoFitPreview();
+}
+
+/* 프롬프트가 길어져도 최대한 스크롤 없이 한 화면에 보이도록,
+   박스 안에 다 안 들어가면 글자 크기를 조금씩 줄여서 맞춰준다.
+   그래도 안 들어갈 만큼 길면 그 지점부터는 스크롤로 자연스럽게 넘어간다. */
+const PREVIEW_FONT_MAX = 13.5;
+const PREVIEW_FONT_MIN = 10.5;
+const PREVIEW_LINE_MAX = 1.85;
+const PREVIEW_LINE_MIN = 1.55;
+
+function autoFitPreview(){
+  const output = document.getElementById('output');
+  if(!output) return;
+
+  let fontSize = PREVIEW_FONT_MAX;
+  output.style.fontSize = fontSize + 'px';
+  output.style.lineHeight = PREVIEW_LINE_MAX;
+
+  // scrollHeight vs clientHeight: 실제 내용 높이가 박스 높이를 넘는 동안 줄여나간다.
+  let guard = 0;
+  while(output.scrollHeight > output.clientHeight + 1 && fontSize > PREVIEW_FONT_MIN && guard < 40){
+    fontSize -= 0.5;
+    const ratio = (fontSize - PREVIEW_FONT_MIN) / (PREVIEW_FONT_MAX - PREVIEW_FONT_MIN);
+    const lineHeight = PREVIEW_LINE_MIN + (PREVIEW_LINE_MAX - PREVIEW_LINE_MIN) * ratio;
+    output.style.fontSize = fontSize + 'px';
+    output.style.lineHeight = lineHeight.toFixed(2);
+    guard++;
+  }
+}
+
+renderPreview();
+
+// 창 크기가 바뀌거나(반응형 전환 포함) 화면 회전 시에도 다시 맞춰준다.
+let resizeTimer;
+window.addEventListener('resize', ()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(autoFitPreview, 120);
+});
+
+function copyOutput(){
+  const text = document.getElementById('output').textContent;
+  if(!text) return;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.getElementById('copyBtn');
+    const original = btn.textContent;
+    btn.textContent = '복사됨 ✓';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent = original; btn.classList.remove('copied'); }, 1600);
+  });
+}
+
+function downloadOutput(){
+  const text = document.getElementById('output').textContent;
+  if(!text) return;
+  const name = (document.getElementById('cloneName').value.trim() || 'ai-clone-prompt');
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name + '-지침.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>

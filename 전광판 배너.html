@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>티스토리 상단 배너 생성기</title>
+<style>
+  :root{
+    --panel-bg:#ffffff;
+    --page-bg:#f2f4f7;
+    --line:#e4e7ec;
+    --ink:#1a1d24;
+    --sub:#6b7280;
+    --accent:#4f46e5;
+    --accent-soft:#eef0ff;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:var(--page-bg);
+    color:var(--ink);
+    padding:28px 20px 60px;
+  }
+  h1{font-size:20px;margin:0 0 4px;}
+  .sub-desc{color:var(--sub);font-size:13px;margin:0 0 24px;}
+  .layout{
+    display:grid;
+    grid-template-columns:360px 1fr;
+    gap:20px;
+    max-width:1280px;
+    margin:0 auto;
+  }
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;}
+    .preview-wrap{position:static;}
+  }
+  .panel{
+    background:var(--panel-bg);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+  }
+  .panel + .panel{margin-top:16px;}
+  .panel h2{
+    font-size:13px;
+    margin:0 0 14px;
+    color:var(--sub);
+    font-weight:700;
+    letter-spacing:.02em;
+  }
+  .field{margin-bottom:14px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  .field label span.val{
+    color:var(--accent);
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+  }
+  input[type="text"], input[type="url"], select{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:13px;
+    background:#fff;
+    color:var(--ink);
+    font-family:inherit;
+  }
+  input[type="range"]{
+    width:100%;
+    accent-color:var(--accent);
+  }
+  input[type="color"]{
+    width:44px;height:32px;
+    padding:0;border:1px solid var(--line);border-radius:6px;
+    background:#fff;cursor:pointer;
+  }
+  .color-row{display:flex;align-items:center;gap:10px;}
+  .color-row .swatch-label{font-size:12px;color:var(--sub);flex:1;}
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .effect-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .effect-btn{
+    border:1.5px solid var(--line);
+    background:#fff;
+    border-radius:8px;
+    padding:10px 8px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    text-align:center;
+    color:var(--sub);
+    transition:.12s;
+    line-height:1.3;
+  }
+  .effect-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .effect-btn.active{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+  .checkbox-field{
+    display:flex;align-items:center;gap:8px;
+  }
+  .checkbox-field input{width:16px;height:16px;accent-color:var(--accent);}
+  .checkbox-field label{margin:0;font-size:13px;font-weight:600;}
+
+  .emoji-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:6px;
+    margin-top:8px;
+  }
+  .emoji-btn{
+    border:1.5px solid var(--line);
+    background:#fff;
+    border-radius:8px;
+    padding:7px 0;
+    font-size:16px;
+    cursor:pointer;
+    text-align:center;
+    transition:.12s;
+  }
+  .emoji-btn:hover{border-color:var(--accent);}
+  .emoji-btn.active{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+  }
+
+  /* preview */
+  .preview-wrap{
+    background:var(--panel-bg);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    position:sticky;
+    top:20px;
+  }
+  .preview-wrap h2{font-size:13px;margin:0 0 12px;color:var(--sub);font-weight:700;}
+  .preview-stage{
+    background:repeating-linear-gradient(45deg,#f8f9fb,#f8f9fb 10px,#f1f2f5 10px,#f1f2f5 20px);
+    border:1px dashed #d8dce3;
+    border-radius:10px;
+    padding:30px 16px;
+  }
+  .banner-outer{
+    width:100%;
+    overflow:hidden;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .banner-inner{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    white-space:nowrap;
+    gap:8px;
+    padding:0 22px;
+  }
+  .banner-icon{font-size:1em;}
+
+  textarea#codeOutput{
+    width:100%;
+    height:220px;
+    margin-top:14px;
+    font-family:'SFMono-Regular',Consolas,Menlo,monospace;
+    font-size:11.5px;
+    line-height:1.5;
+    padding:12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#0f1117;
+    color:#d7dae2;
+    resize:vertical;
+  }
+  .btn-row{display:flex;gap:8px;margin-top:10px;}
+  .btn{
+    flex:1;
+    padding:10px 12px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:#fff;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    transition:.12s;
+  }
+  .btn.primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  .btn.primary:hover{background:#4338ca;}
+  .btn:not(.primary):hover{border-color:var(--accent);color:var(--accent);}
+  .hint{
+    font-size:11.5px;
+    color:var(--sub);
+    margin-top:8px;
+    line-height:1.5;
+  }
+  .toast{
+    position:fixed;
+    bottom:24px;left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink);
+    color:#fff;
+    padding:10px 18px;
+    border-radius:8px;
+    font-size:13px;
+    opacity:0;
+    pointer-events:none;
+    transition:.2s;
+    z-index:99;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<h1>🎌 티스토리 상단 배너 생성기</h1>
+<p class="sub-desc">좌→우로 이동하며 깜빡이는 배너를 만들고, 속도·효과를 조절한 뒤 코드를 복사해 티스토리 HTML 모드에 붙여넣으세요.</p>
+
+<div class="layout">
+
+  <!-- 좌측 컨트롤 패널 -->
+  <div class="controls">
+
+    <div class="panel">
+      <h2>텍스트</h2>
+      <div class="field">
+        <label>배너 문구</label>
+        <input type="text" id="bannerText" value="🔥 지금 신청하면 상담비 전액 무료 이벤트 🔥">
+      </div>
+      <div class="field">
+        <label>아이콘 (선택, 이모지)</label>
+        <input type="text" id="bannerIcon" value="📢" placeholder="예: 📢 🔥 ✨ (비워두면 표시 안 함)">
+        <div class="emoji-grid" id="emojiGrid">
+          <button type="button" class="emoji-btn" data-emoji="">🚫</button>
+          <button type="button" class="emoji-btn" data-emoji="📢">📢</button>
+          <button type="button" class="emoji-btn" data-emoji="🔥">🔥</button>
+          <button type="button" class="emoji-btn" data-emoji="✨">✨</button>
+          <button type="button" class="emoji-btn" data-emoji="🎉">🎉</button>
+          <button type="button" class="emoji-btn" data-emoji="⏰">⏰</button>
+          <button type="button" class="emoji-btn" data-emoji="💥">💥</button>
+          <button type="button" class="emoji-btn" data-emoji="🚨">🚨</button>
+          <button type="button" class="emoji-btn" data-emoji="👉">👉</button>
+          <button type="button" class="emoji-btn" data-emoji="✅">✅</button>
+          <button type="button" class="emoji-btn" data-emoji="⭐">⭐</button>
+          <button type="button" class="emoji-btn" data-emoji="💡">💡</button>
+          <button type="button" class="emoji-btn" data-emoji="📌">📌</button>
+          <button type="button" class="emoji-btn" data-emoji="🎁">🎁</button>
+          <button type="button" class="emoji-btn" data-emoji="💰">💰</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>클릭 시 이동할 링크 (선택)</label>
+        <input type="url" id="bannerLink" placeholder="https://...">
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>효과 선택</h2>
+      <div class="effect-grid" id="effectGrid">
+        <div class="effect-btn active" data-effect="slideBlink">이동 + 깜빡임</div>
+        <div class="effect-btn" data-effect="slideOnly">이동만 (마퀴)</div>
+        <div class="effect-btn" data-effect="blinkOnly">깜빡임만</div>
+        <div class="effect-btn" data-effect="fade">페이드 인/아웃</div>
+        <div class="effect-btn" data-effect="bounce">이동 + 바운스</div>
+        <div class="effect-btn" data-effect="glow">네온 글로우</div>
+        <div class="effect-btn" data-effect="ledScroll">LED 전광판</div>
+      </div>
+      <p class="hint" id="ledHint" style="display:none;">LED 전광판 선택 시 배경은 도트 매트릭스, 텍스트는 네온 글로우로 자동 적용됩니다. 포인트 색상을 바꾸면 LED 색상(빨강/초록 등)이 바뀌고, 문구가 끊김 없이 계속 흘러갑니다.</p>
+      <div class="field" id="ledSpacingField" style="display:none;">
+        <label>문구 간격</label>
+        <div class="effect-grid" id="spacingGrid">
+          <div class="effect-btn" data-spacing="0">붙여서</div>
+          <div class="effect-btn" data-spacing="20">좁게</div>
+          <div class="effect-btn active" data-spacing="50">보통</div>
+          <div class="effect-btn" data-spacing="90">넓게</div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:14px;">
+        <label>이동 방향</label>
+        <select id="direction">
+          <option value="ltr" selected>왼쪽 → 오른쪽</option>
+          <option value="rtl">오른쪽 → 왼쪽</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>속도 조절</h2>
+      <div class="field">
+        <label>이동 속도 <span class="val" id="moveSpeedVal">6초</span></label>
+        <input type="range" id="moveSpeed" min="2" max="20" step="0.5" value="6">
+      </div>
+      <div class="field" id="blinkSpeedField">
+        <label>깜빡임 속도 <span class="val" id="blinkSpeedVal">0.6초</span></label>
+        <input type="range" id="blinkSpeed" min="0.15" max="2" step="0.05" value="0.6">
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>색상 &amp; 스타일</h2>
+      <div class="color-row" style="margin-bottom:10px;" id="bgColorRow">
+        <input type="color" id="bgColor" value="#1a1d24">
+        <span class="swatch-label" id="bgColorLabel">배경색</span>
+        <input type="color" id="textColor" value="#ffffff">
+        <span class="swatch-label">텍스트색</span>
+      </div>
+      <div class="color-row" style="margin-bottom:14px;">
+        <input type="color" id="accentColor" value="#ffd23f">
+        <span class="swatch-label" id="accentColorLabel">포인트/글로우 색</span>
+      </div>
+      <div class="field">
+        <label>배너 높이 <span class="val" id="heightVal">52px</span></label>
+        <input type="range" id="bannerHeight" min="32" max="100" step="1" value="52">
+      </div>
+      <div class="field">
+        <label>글자 크기 <span class="val" id="fontSizeVal">16px</span></label>
+        <input type="range" id="fontSize" min="11" max="28" step="1" value="16">
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label>글자 굵기</label>
+          <select id="fontWeight">
+            <option value="400">보통</option>
+            <option value="700" selected>볼드</option>
+            <option value="900">매우 굵게</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>모서리 둥글기 <span class="val" id="radiusVal">0px</span></label>
+          <input type="range" id="borderRadius" min="0" max="30" step="1" value="0">
+        </div>
+      </div>
+      <div class="checkbox-field" style="margin-top:6px;">
+        <input type="checkbox" id="useShadow" checked>
+        <label for="useShadow">은은한 그림자 사용</label>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 우측 미리보기 + 코드 -->
+  <div>
+    <div class="preview-wrap">
+      <h2>실시간 미리보기</h2>
+      <div class="preview-stage">
+        <div class="banner-outer" id="bannerOuter">
+          <div class="banner-inner" id="bannerInner">
+            <span class="banner-icon" id="previewIcon">📢</span>
+            <span id="previewText">🔥 지금 신청하면 상담비 전액 무료 이벤트 🔥</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="copyBtn">코드 복사하기</button>
+        <button class="btn" id="downloadBtn">HTML 파일 다운로드</button>
+      </div>
+      <textarea id="codeOutput" spellcheck="false" readonly></textarea>
+      <p class="hint">
+        생성된 코드를 티스토리 글쓰기 화면의 <b>HTML 모드</b>(또는 스킨 편집 &gt; header.html)에 붙여넣으면 됩니다.
+        JavaScript 없이 순수 CSS 애니메이션으로 동작해 어디에 붙여도 안전하게 작동합니다.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">복사되었습니다!</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+
+  function fontClamp(px){
+    const min = Math.max(11, Math.round(px * 0.62));
+    return `clamp(${min}px, 4vw, ${px}px)`;
+  }
+  function heightClamp(px){
+    const min = Math.max(30, Math.round(px * 0.7));
+    return `clamp(${min}px, 9vw, ${px}px)`;
+  }
+  const BOLD_SAFE_CSS = `-webkit-text-stroke:0.35px currentColor; text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased;`;
+
+  const state = {
+    text: $('bannerText'),
+    icon: $('bannerIcon'),
+    link: $('bannerLink'),
+    direction: $('direction'),
+    moveSpeed: $('moveSpeed'),
+    blinkSpeed: $('blinkSpeed'),
+    bgColor: $('bgColor'),
+    textColor: $('textColor'),
+    accentColor: $('accentColor'),
+    bannerHeight: $('bannerHeight'),
+    fontSize: $('fontSize'),
+    fontWeight: $('fontWeight'),
+    borderRadius: $('borderRadius'),
+    useShadow: $('useShadow'),
+  };
+
+  let currentEffect = 'slideBlink';
+  let currentSpacing = 50;
+  let ledPresetApplied = false;
+  const effectButtons = document.querySelectorAll('.effect-btn');
+  effectButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      effectButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentEffect = btn.dataset.effect;
+      toggleFieldsForEffect(currentEffect);
+      render();
+    });
+  });
+
+  const emojiButtons = document.querySelectorAll('.emoji-btn');
+  function syncEmojiActive(){
+    const val = state.icon.value;
+    emojiButtons.forEach(b=>b.classList.toggle('active', b.dataset.emoji === val));
+  }
+  emojiButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.icon.value = btn.dataset.emoji;
+      syncEmojiActive();
+      render();
+    });
+  });
+  state.icon.addEventListener('input', syncEmojiActive);
+
+  const spacingButtons = document.querySelectorAll('#spacingGrid .effect-btn');
+  spacingButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      spacingButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentSpacing = parseInt(btn.dataset.spacing, 10);
+      render();
+    });
+  });
+
+  function toggleFieldsForEffect(effect){
+    const isLed = effect === 'ledScroll';
+    $('ledHint').style.display = isLed ? 'block' : 'none';
+    $('ledSpacingField').style.display = isLed ? 'block' : 'none';
+    $('blinkSpeedField').style.opacity = isLed ? '0.35' : '1';
+    $('blinkSpeed').disabled = isLed;
+    $('textColor').disabled = isLed;
+    $('textColor').style.opacity = isLed ? '0.35' : '1';
+    $('bgColorLabel').textContent = isLed ? '배경 베이스(어둡게)' : '배경색';
+    $('accentColorLabel').textContent = isLed ? 'LED 색상' : '포인트/글로우 색';
+    if(isLed && !ledPresetApplied){
+      state.bgColor.value = '#070707';
+      state.accentColor.value = '#ff2b2b';
+      ledPresetApplied = true;
+    }
+  }
+
+  Object.values(state).forEach(el=>{
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  });
+
+  function buildKeyframes(prefix, effect, dir){
+    const moveFrom = dir === 'ltr' ? '-115%' : '115%';
+    const moveTo   = dir === 'ltr' ? '115%'  : '-115%';
+
+    switch(effect){
+      case 'slideBlink':
+      case 'slideOnly':
+        return `
+        @keyframes ${prefix}-move {
+          0%   { transform: translateX(${moveFrom}); }
+          100% { transform: translateX(${moveTo}); }
+        }`;
+      case 'blinkOnly':
+        return ``;
+      case 'fade':
+        return `
+        @keyframes ${prefix}-move {
+          0%   { transform: translateX(${moveFrom}); }
+          100% { transform: translateX(${moveTo}); }
+        }`;
+      case 'bounce':
+        return `
+        @keyframes ${prefix}-move {
+          0%   { transform: translateX(${moveFrom}) translateY(0); }
+          10%  { transform: translateX(calc(${moveFrom} + 15%)) translateY(-38%); }
+          20%  { transform: translateX(calc(${moveFrom} + 30%)) translateY(0); }
+          30%  { transform: translateX(calc(${moveFrom} + 45%)) translateY(-38%); }
+          40%  { transform: translateX(calc(${moveFrom} + 60%)) translateY(0); }
+          50%  { transform: translateX(calc(${moveFrom} + 75%)) translateY(-38%); }
+          60%  { transform: translateX(calc(${moveFrom} + 90%)) translateY(0); }
+          70%  { transform: translateX(calc(${moveFrom} + 105%)) translateY(-38%); }
+          80%  { transform: translateX(calc(${moveFrom} + 120%)) translateY(0); }
+          90%  { transform: translateX(calc(${moveFrom} + 135%)) translateY(-38%); }
+          100% { transform: translateX(${moveTo}) translateY(0); }
+        }`;
+      case 'glow':
+        return `
+        @keyframes ${prefix}-move {
+          0%   { transform: translateX(${moveFrom}); }
+          100% { transform: translateX(${moveTo}); }
+        }`;
+      default:
+        return '';
+    }
+  }
+
+  function buildSecondaryKeyframes(prefix, effect, accent){
+    switch(effect){
+      case 'slideBlink':
+      case 'blinkOnly':
+        return `
+        @keyframes ${prefix}-blink {
+          0%, 45%  { opacity: 1; }
+          50%      { opacity: 0.18; }
+          95%,100% { opacity: 1; }
+        }`;
+      case 'fade':
+        return `
+        @keyframes ${prefix}-blink {
+          0%   { opacity: 0; }
+          15%  { opacity: 1; }
+          85%  { opacity: 1; }
+          100% { opacity: 0; }
+        }`;
+      case 'glow':
+        return `
+        @keyframes ${prefix}-blink {
+          0%, 100% { text-shadow: 0 0 4px ${accent}, 0 0 8px ${accent}; }
+          50%      { text-shadow: 0 0 16px ${accent}, 0 0 30px ${accent}, 0 0 40px ${accent}; }
+        }`;
+      default:
+        return '';
+    }
+  }
+
+  function animationDeclarations(prefix, effect, moveDur, blinkDur){
+    switch(effect){
+      case 'slideOnly':
+        return `animation: ${prefix}-move ${moveDur}s linear infinite;`;
+      case 'slideBlink':
+        return `animation: ${prefix}-move ${moveDur}s linear infinite, ${prefix}-blink ${blinkDur}s steps(1) infinite;`;
+      case 'blinkOnly':
+        return `animation: ${prefix}-blink ${blinkDur}s steps(1) infinite;`;
+      case 'fade':
+        return `animation: ${prefix}-move ${moveDur}s ease-in-out infinite, ${prefix}-blink ${moveDur}s ease-in-out infinite;`;
+      case 'bounce':
+        return `animation: ${prefix}-move ${moveDur}s ease-in-out infinite;`;
+      case 'glow':
+        return `animation: ${prefix}-move ${moveDur}s linear infinite, ${prefix}-blink ${blinkDur}s ease-in-out infinite;`;
+      default:
+        return '';
+    }
+  }
+
+  function getSettings(){
+    return {
+      text: state.text.value || '배너 문구를 입력하세요',
+      icon: state.icon.value.trim(),
+      link: state.link.value.trim(),
+      direction: state.direction.value,
+      moveDur: parseFloat(state.moveSpeed.value),
+      blinkDur: parseFloat(state.blinkSpeed.value),
+      bg: state.bgColor.value,
+      textColor: state.textColor.value,
+      accent: state.accentColor.value,
+      height: parseInt(state.bannerHeight.value, 10),
+      fontSize: parseInt(state.fontSize.value, 10),
+      fontWeight: state.fontWeight.value,
+      radius: parseInt(state.borderRadius.value, 10),
+      shadow: state.useShadow.checked,
+      effect: currentEffect,
+      spacing: currentSpacing,
+    };
+  }
+
+  function render(){
+    const s = getSettings();
+    $('moveSpeedVal').textContent = s.moveDur + '초';
+    $('blinkSpeedVal').textContent = s.blinkDur + '초';
+    $('heightVal').textContent = s.height + 'px';
+    $('fontSizeVal').textContent = s.fontSize + 'px';
+    $('radiusVal').textContent = s.radius + 'px';
+
+    // ---- 미리보기 반영 ----
+    const outer = $('bannerOuter');
+    outer.style.height = heightClamp(s.height);
+    outer.style.borderRadius = s.radius + 'px';
+    outer.style.boxShadow = s.shadow ? '0 4px 14px rgba(0,0,0,.18)' : 'none';
+
+    let styleTag = document.getElementById('previewDynamicStyle');
+    if(styleTag) styleTag.remove();
+    styleTag = document.createElement('style');
+    styleTag.id = 'previewDynamicStyle';
+
+    if(s.effect === 'ledScroll'){
+      outer.style.background = `${s.bg} radial-gradient(circle, rgba(255,255,255,.07) 1px, transparent 1.3px)`;
+      outer.style.backgroundSize = '5px 5px';
+      const iconHtml = s.icon ? `<span style="margin-right:8px;">${escapeHtml(s.icon)}</span>` : '';
+      const REPEAT = 6;
+      const segment = `<div class="jm-prev-seg" style="display:inline-flex;align-items:center;padding-right:${s.spacing}px;">${iconHtml}<span>${escapeHtml(s.text)}</span></div>`;
+      const half = segment.repeat(REPEAT);
+      outer.innerHTML = `<div class="jm-prev-track" id="ledTrack" style="display:inline-flex;white-space:nowrap;">${half}${half}</div>`;
+      const kf = ledKeyframes('jm-prev', s.direction);
+      styleTag.textContent = `
+        ${kf}
+        .jm-prev-track{ animation: jm-prev-ledmove ${s.moveDur}s linear infinite; }
+        .jm-prev-seg{
+          color:${s.accent};
+          font-size:${fontClamp(s.fontSize)};
+          font-weight:${s.fontWeight} !important;
+          font-family:'Courier New',monospace;
+          letter-spacing:1px;
+          text-shadow:0 0 4px ${s.accent}, 0 0 10px ${s.accent}, 0 0 18px ${s.accent};
+          ${BOLD_SAFE_CSS}
+        }
+      `;
+      document.head.appendChild(styleTag);
+    } else {
+      outer.style.background = s.bg;
+      outer.style.backgroundSize = '';
+      outer.innerHTML = `<div class="banner-inner" id="bannerInner"><span class="banner-icon" id="previewIcon">${s.icon}</span><span id="previewText"></span></div>`;
+      const inner = document.getElementById('bannerInner');
+      inner.style.color = s.textColor;
+      inner.style.fontSize = fontClamp(s.fontSize);
+      inner.style.fontWeight = s.fontWeight;
+      inner.style.webkitTextStroke = '0.35px currentColor';
+      document.getElementById('previewIcon').style.display = s.icon ? 'inline' : 'none';
+      document.getElementById('previewText').textContent = s.text;
+
+      const kf1 = buildKeyframes('jm-prev', s.effect, s.direction);
+      const kf2 = buildSecondaryKeyframes('jm-prev', s.effect, s.accent);
+      const anim = animationDeclarations('jm-prev', s.effect, s.moveDur, s.blinkDur);
+      styleTag.textContent = `
+        ${kf1}
+        ${kf2}
+        #bannerInner { ${anim} will-change: transform, opacity; }
+      `;
+      document.head.appendChild(styleTag);
+      inner.style.animation = 'none';
+      void inner.offsetWidth;
+      inner.style.animation = '';
+    }
+
+    buildOutputCode(s);
+  }
+
+  function ledKeyframes(prefix, dir){
+    return dir === 'ltr'
+      ? `@keyframes ${prefix}-ledmove { 0%{transform:translateX(-50%);} 100%{transform:translateX(0%);} }`
+      : `@keyframes ${prefix}-ledmove { 0%{transform:translateX(0%);} 100%{transform:translateX(-50%);} }`;
+  }
+
+  function buildLedOutputCode(s, cls){
+    const kf = ledKeyframes(cls, s.direction);
+    const iconHtml = s.icon ? `<span style="margin-right:8px;">${escapeHtml(s.icon)}</span>` : '';
+    const REPEAT = 6;
+    const segmentHtml = `<div class="${cls}-seg">${iconHtml}<span>${escapeHtml(s.text)}</span></div>`;
+    const halfHtml = segmentHtml.repeat(REPEAT);
+    const wrapOpenTag = s.link
+      ? `<a href="${escapeHtml(s.link)}" target="_blank" rel="noopener" class="${cls}-outer" style="text-decoration:none;">`
+      : `<div class="${cls}-outer">`;
+    const wrapCloseTag = s.link ? `</a>` : `</div>`;
+
+    const code = `<!-- 티스토리 상단 배너 : LED 전광판 -->
+<style>
+.${cls}-outer{
+  width:100%;
+  height:${heightClamp(s.height)};
+  overflow:hidden;
+  position:relative;
+  display:flex;
+  align-items:center;
+  background:${s.bg} radial-gradient(circle, rgba(255,255,255,.07) 1px, transparent 1.3px);
+  background-size:5px 5px;
+  border-radius:${s.radius}px;
+  ${s.shadow ? 'box-shadow:0 4px 14px rgba(0,0,0,.18);' : ''}
+  box-sizing:border-box;
+}
+.${cls}-track{
+  display:inline-flex;
+  white-space:nowrap;
+  animation: ${cls}-ledmove ${s.moveDur}s linear infinite;
+}
+.${cls}-seg{
+  display:inline-flex;
+  align-items:center;
+  padding-right:${s.spacing}px;
+  color:${s.accent};
+  font-size:${fontClamp(s.fontSize)};
+  font-weight:${s.fontWeight} !important;
+  font-family:'Courier New',monospace;
+  letter-spacing:1px;
+  text-shadow:0 0 4px ${s.accent}, 0 0 10px ${s.accent}, 0 0 18px ${s.accent};
+  ${BOLD_SAFE_CSS}
+}
+${kf}
+</style>
+${wrapOpenTag}
+  <div class="${cls}-track">
+    ${halfHtml}
+    ${halfHtml}
+  </div>
+${wrapCloseTag}`;
+
+    $('codeOutput').value = code.trim();
+  }
+
+  function buildOutputCode(s){
+    const cls = 'jm-tistory-banner-' + Math.random().toString(36).slice(2,7);
+
+    if(s.effect === 'ledScroll'){
+      buildLedOutputCode(s, cls);
+      return;
+    }
+
+    const kf1 = buildKeyframes(cls, s.effect, s.direction);
+    const kf2 = buildSecondaryKeyframes(cls, s.effect, s.accent);
+    const anim = animationDeclarations(cls, s.effect, s.moveDur, s.blinkDur);
+    const iconHtml = s.icon ? `<span class="${cls}-icon">${escapeHtml(s.icon)}</span>` : '';
+    const contentHtml = `${iconHtml}<span>${escapeHtml(s.text)}</span>`;
+    const wrapOpenTag = s.link
+      ? `<a href="${escapeHtml(s.link)}" target="_blank" rel="noopener" class="${cls}-outer" style="text-decoration:none;">`
+      : `<div class="${cls}-outer">`;
+    const wrapCloseTag = s.link ? `</a>` : `</div>`;
+
+    const code = `<!-- 티스토리 상단 배너 : ${effectLabel(s.effect)} -->
+<style>
+.${cls}-outer{
+  width:100%;
+  height:${heightClamp(s.height)};
+  overflow:hidden;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:${s.bg};
+  border-radius:${s.radius}px;
+  ${s.shadow ? 'box-shadow:0 4px 14px rgba(0,0,0,.18);' : ''}
+  box-sizing:border-box;
+}
+.${cls}-inner{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+  color:${s.textColor};
+  font-size:${fontClamp(s.fontSize)};
+  font-weight:${s.fontWeight} !important;
+  font-family:'Pretendard','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  ${BOLD_SAFE_CSS}
+  ${anim}
+}
+${kf1}
+${kf2}
+</style>
+${wrapOpenTag}
+  <div class="${cls}-inner">
+    ${contentHtml}
+  </div>
+${wrapCloseTag}`;
+
+    $('codeOutput').value = code.trim();
+  }
+
+  function effectLabel(effect){
+    return {
+      slideBlink:'이동+깜빡임', slideOnly:'이동만', blinkOnly:'깜빡임만',
+      fade:'페이드 인/아웃', bounce:'이동+바운스', glow:'네온 글로우', ledScroll:'LED 전광판'
+    }[effect] || effect;
+  }
+
+  function escapeHtml(str){
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  $('copyBtn').addEventListener('click', ()=>{
+    const ta = $('codeOutput');
+    ta.select();
+    ta.setSelectionRange(0, 999999);
+    navigator.clipboard.writeText(ta.value).then(()=>{
+      showToast('코드가 복사되었습니다!');
+    }).catch(()=>{
+      document.execCommand('copy');
+      showToast('코드가 복사되었습니다!');
+    });
+  });
+
+  $('downloadBtn').addEventListener('click', ()=>{
+    const blob = new Blob([$('codeOutput').value], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tistory-top-banner.html';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('파일이 다운로드되었습니다!');
+  });
+
+  let toastTimer;
+  function showToast(msg){
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+  }
+
+  render();
+  syncEmojiActive();
+})();
+</script>
+</body>
+</html>
